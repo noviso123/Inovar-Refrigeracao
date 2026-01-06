@@ -8,8 +8,8 @@ headers = {
     "Accept": "application/json"
 }
 
-print("Waiting 45s for build...")
-time.sleep(45)
+print("Waiting 90s for build...")
+time.sleep(90)
 
 r = requests.get(
     f"https://api.render.com/v1/services/{SERVICE_ID}/deploys?limit=1",
@@ -17,4 +17,4 @@ r = requests.get(
     verify=False
 )
 d = r.json()[0]["deploy"]
-print(f"Status: {d['status']} | Commit: {d['commit']['message']}")
+print(f"Status: {d['status']} | Commit: {d['commit']['message'][:50]}")

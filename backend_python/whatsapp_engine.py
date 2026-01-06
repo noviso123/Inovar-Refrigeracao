@@ -8,20 +8,6 @@ import json
 from typing import Optional
 import base64
 
-# Neonize Imports
-from neonize.client import NewClient
-from neonize.events import (
-    ConnectedEv,
-    MessageEv,
-    PairStatusEv,
-    LoggedOutEv,
-    event,
-    EventIndex
-)
-from neonize.types import MessageServerID
-from neonize.utils import log
-from neonize.utils.enum import ReceiptType
-
 # Database
 from database import SessionLocal
 from sqlalchemy import text
@@ -32,25 +18,52 @@ logger = logging.getLogger(__name__)
 # Constants
 SESSION_PATH = "whatsapp_session.sqlite3"
 
+# Try importing Neonize - it's optional (requires CGO)
+NEONIZE_AVAILABLE = False
+try:
+    from neonize.client import NewClient
+    from neonize.events import (
+        ConnectedEv,
+        MessageEv,
+        PairStatusEv,
+        LoggedOutEv,
+        event,
+        EventIndex
+    )
+    from neonize.types import MessageServerID
+    from neonize.utils import log
+    from neonize.utils.enum import ReceiptType
+    NEONIZE_AVAILABLE = True
+    logger.info("✅ Neonize WhatsApp engine available")
+except ImportError as e:
+    logger.warning(f"⚠️ Neonize not available (CGO dependency): {e}")
+    logger.warning("⚠️ WhatsApp features will be disabled")
+
 class WhatsappBrain:
     def __init__(self):
-        self.client = NewClient(SESSION_PATH)
         self.is_connected = False
         self.is_running = False
+        self.client = None
 
-        # Initial Config Cache
-        self.config = {
-            "min_delay": 15,
-            "max_delay": 45,
-            "hora_inicio": "08:00",
-            "hora_fim": "21:00",
-            "ativo": True
-        }
-
-        # Register Events
-        self.register_events()
+        if NEONIZE_AVAILABLE:
+            self.client = NewClient(SESSION_PATH)
+            # Initial Config Cache
+            self.config = {
+                "min_delay": 15,
+                "max_delay": 45,
+                "hora_inicio": "08:00",
+                "hora_fim": "21:00",
+                "ativo": True
+            }
+            # Register Events
+            self.register_events()
+        else:
+            self.config = {"ativo": False}
 
     def register_events(self):
+        if not NEONIZE_AVAILABLE or not self.client:
+            return
+
         @self.client.event(ConnectedEv)
         def on_connected(client: NewClient, message: ConnectedEv):
             logger.info("🟢 WhatsApp Connected!")
@@ -67,15 +80,6 @@ class WhatsappBrain:
         def on_pair_status(client: NewClient, message: PairStatusEv):
             logger.info(f"🔄 Pair Status: {message}")
             try:
-                # Neonize/Whatsmeow PairStatusEv often contains the QR code data or ID
-                # We need to extract it. If message is a list/string, we parse it.
-                # NOTE: In Python Neonize binding, exact extraction depends on structure.
-                # Assuming we can get the QR string via client.qr() if this event fires
-                # or constructing it from the message ID if provided.
-
-                # For now, let's try to grab from client property if exposed, or fallback
-                # Neonize typically prints QR to stdout.
-                # We will set status to 'aguardando_qr' so frontend knows.
                 self.update_bot_status("aguardando_qr")
             except Exception as e:
                 logger.error(f"Error handling pair status: {e}")
@@ -86,6 +90,10 @@ class WhatsappBrain:
 
     async def start(self):
         """Starts the Neonize client and the Brain loop in background."""
+        if not NEONIZE_AVAILABLE:
+            logger.warning("⚠️ WhatsApp Brain not starting - Neonize not available")
+            return
+
         self.is_running = True
 
         # 1. Start Neonize Client in Thread
@@ -100,6 +108,9 @@ class WhatsappBrain:
 
     async def process_queue_loop(self):
         """The 'Brain' loop that checks queue vs anti-ban rules."""
+        if not NEONIZE_AVAILABLE:
+            return
+
         logger.info("🧠 Brain Loop Initiated")
 
         while self.is_running:
@@ -114,7 +125,6 @@ class WhatsappBrain:
 
                 # 1. Check Anti-Ban Hours
                 if self.is_sleeping_time():
-                    # logger.info("😴 Shhh... Brain is sleeping (Anti-Ban Hours)")
                     await asyncio.sleep(60)
                     continue
 
@@ -130,7 +140,6 @@ class WhatsappBrain:
 
                     # 3. Simulate Human Typing
                     typing_delay = random.randint(3, 8)
-                    # self.client.send_chat_state(msg['numero'], "composing")
                     await asyncio.sleep(typing_delay)
 
                     # 4. Send Message
@@ -177,28 +186,23 @@ class WhatsappBrain:
             start_str = str(self.config.get("hora_inicio", "08:00"))
             end_str = str(self.config.get("hora_fim", "21:00"))
 
-            # Simple conversion generic
             start = datetime.strptime(start_str, "%H:%M:%S").time() if len(start_str) > 5 else datetime.strptime(start_str, "%H:%M").time()
             end = datetime.strptime(end_str, "%H:%M:%S").time() if len(end_str) > 5 else datetime.strptime(end_str, "%H:%M").time()
 
-            # Logic: Active between Start and End.
-            # So Sleeping if NOW < Start OR NOW > End
             if start < end:
                 return now < start or now > end
-            else: # Crosses midnight (e.g. 22:00 to 06:00)
+            else:
                 return not (start <= now or now <= end)
         except:
-            return False # Fail safe: awake
+            return False
 
     def fetch_next_message(self):
         """Fetch one pending message from fila_envio."""
         db = SessionLocal()
         try:
-            # Postgres Specific: FOR UPDATE SKIP LOCKED
             sql = text("SELECT id, numero, mensagem, media_url FROM fila_envio WHERE status = 'pendente' ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED")
             result = db.execute(sql).fetchone()
             if result:
-                 # Mark as processing
                  update_sql = text("UPDATE fila_envio SET status = 'processando' WHERE id = :id")
                  db.execute(update_sql, {"id": result[0]})
                  db.commit()
@@ -225,7 +229,6 @@ class WhatsappBrain:
     def update_bot_status(self, status, qr_code=None):
         db = SessionLocal()
         try:
-             # Upsert ID=1
              sql = text("""
                 INSERT INTO bot_status (id, status_conexao, qr_code_base64, ultima_atualizacao)
                 VALUES (1, :status, :qr, NOW())
@@ -241,6 +244,10 @@ class WhatsappBrain:
 
     def send_message_neonize(self, phone, body, media_url=None):
         """Wrapper to call Neonize send methods."""
+        if not NEONIZE_AVAILABLE or not self.client:
+            logger.error("Cannot send message - Neonize not available")
+            return
+
         jid = self.client.build_jid(phone)
 
         if media_url:
