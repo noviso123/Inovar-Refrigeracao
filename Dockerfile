@@ -1,20 +1,4 @@
-# Build Stage for Frontend
-FROM node:18-alpine as frontend-build
-WORKDIR /app/frontend
-
-# Copy dependency files
-COPY frontend/package.json ./
-
-# Install dependencies
-RUN npm install
-
-# Copy source code
-COPY frontend/ ./
-
-# Build the application
-RUN npm run build
-
-# Runtime Stage for Backend
+# Backend Python Only
 FROM python:3.9-slim
 WORKDIR /app
 
@@ -24,19 +8,14 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend requirements
+# Copy requirements and install
 COPY backend_python/requirements.txt ./
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
+# Copy backend code only
 COPY backend_python/ .
 
-# Copy built frontend assets from previous stage
-COPY --from=frontend-build /app/frontend/dist /app/static
-
 # Environment variables
-ENV STATIC_DIR=/app/static
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1

@@ -534,57 +534,14 @@ async def websocket_notifications(websocket: WebSocket, token: str = None):
             pass
 
 
-# ============= SERVING FRONTEND =============
-# Mount frontend/dist to serve static files
-if os.path.exists("frontend/dist"):
-    app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
+# ============= ROOT ROUTE =============
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "Inovar Refrigeração API", "version": "1.0.1"}
 
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        # Allow API routes to work
-        if full_path.startswith("api/") or full_path.startswith("ws/") or full_path == "api":
-            raise HTTPException(status_code=404)
-
-        # Check if file exists in frontend/dist
-        file_path = os.path.join("frontend/dist", full_path)
-        if os.path.isfile(file_path):
-            return FileResponse(file_path)
-
-        # Otherwise serve index.html (SPA support)
-        return FileResponse("frontend/dist/index.html")
-else:
-    logger.warning("⚠️ frontend/dist directory not found. Frontend will not be served.")
-
-
-# ============= SERVING FRONTEND =============
-# Mount frontend/dist to serve static files
-# In Docker, we copy dist to /app/static
-STATIC_DIR = os.getenv("STATIC_DIR", "static")
-
-if os.path.exists(STATIC_DIR):
-    logger.info(f"📁 Serving static files from {STATIC_DIR}")
-
-    # Serve assets folder
-    if os.path.exists(os.path.join(STATIC_DIR, "assets")):
-        app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
-
-    # Serve other static resources if needed
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
-
-    @app.exception_handler(404)
-    async def custom_404_handler(request: Request, exc: HTTPException):
-        # Allow API 404s to pass through
-        if request.url.path.startswith("/api") or request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
-             return await http_exception_handler(request, exc)
-
-        # Fallback to index.html for frontend routes (SPA)
-        index_path = os.path.join(STATIC_DIR, "index.html")
-        if os.path.exists(index_path):
-             return FileResponse(index_path)
-        return await http_exception_handler(request, exc)
 
 if __name__ == "__main__":
     import uvicorn
-    host = os.getenv("HOST", "127.0.0.1")
+    host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host=host, port=port)
