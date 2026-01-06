@@ -30,17 +30,45 @@ export const SetupAdmin: React.FC = () => {
 
         setLoading(true);
         try {
-            await api.post('/auth/setup-admin', {
-                full_name: formData.full_name,
+            // 1. Criar usuário no Supabase Auth
+            const { data, error: signUpError } = await supabase.auth.signUp({
+                email: formData.email,
+                password: formData.password,
+                options: {
+                    data: {
+                        full_name: formData.full_name,
+                        role: 'admin',
+                    }
+                }
+            });
+
+            if (signUpError) throw signUpError;
+            if (!data.user) throw new Error('Erro ao criar usuário no Supabase');
+
+            // 2. Fazer Login automático para pegar o token
+            const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
                 email: formData.email,
                 password: formData.password
+            });
+
+            if (sessionError || !sessionData.session) throw new Error('Erro ao autenticar após cadastro.');
+
+            // 3. Chamar Backend para confirmar setup e garantir flag de Admin
+            await api.post('/auth/setup-admin', {
+                email: formData.email,
+                full_name: formData.full_name,
+                password: "supabase_managed"
+            }, {
+                headers: {
+                    Authorization: `Bearer ${sessionData.session.access_token}`
+                }
             });
 
             notify('Administrador criado com sucesso!', 'success');
             navigate('/login');
         } catch (error: any) {
             console.error('Setup Error:', error);
-            const msg = error.response?.data?.detail || 'Erro ao configurar administrador.';
+            const msg = error.message || error.response?.data?.detail || 'Erro ao configurar administrador.';
             notify(`Falha: ${msg}`, 'error');
         } finally {
             setLoading(false);

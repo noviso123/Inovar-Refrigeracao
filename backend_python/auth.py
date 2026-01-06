@@ -132,7 +132,7 @@ async def google_link(token: dict):
     return {"message": "Conta Google vinculada com sucesso"}
 
 @router.post("/auth/setup-admin")
-async def setup_first_admin(user_data: UserCreate, db: Session = Depends(get_db)):
+async def setup_first_admin(user_data: UserCreate, request: Request, db: Session = Depends(get_db)):
     # 1. Verification: Is there ANY admin?
     existing_admin = db.query(User).filter(User.role == "admin").first()
     if existing_admin:
@@ -141,21 +141,40 @@ async def setup_first_admin(user_data: UserCreate, db: Session = Depends(get_db)
             detail="Setup already completed. An admin exists."
         )
 
-    # 2. Check email uniqueness
-    if db.query(User).filter(User.email == user_data.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # 2. Extract Token from Header (Manual verification as this is a hybrid endpoint)
+    # Ideally, we should use Depends(get_current_user) but we want to allow 'unregistered' users in DB to call this?
+    # No, with Supabase, the user IS registered in Auth, just not in DB properly as Admin.
 
-    # 3. Create Admin
-    hashed_password = get_password_hash(user_data.password)
-    new_admin = User(
-        email=user_data.email,
-        password_hash=hashed_password,
-        full_name=user_data.full_name,
-        role="admin", # Force Admin
-        is_active=True
-    )
-    db.add(new_admin)
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+         raise HTTPException(status_code=401, detail="Missing Authorization Header")
+
+    token = auth_header.split(" ")[1]
+
+    try:
+        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=[ALGORITHM], options={"verify_act": False})
+        token_email = payload.get("email")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Token: {str(e)}")
+
+    if token_email != user_data.email:
+        raise HTTPException(status_code=400, detail="Token email does not match provided email")
+
+    # 3. Create/Update Admin in Local DB
+    # Check if user was already auto-created by get_current_user (unlikely if they just signed up and went straight here, but possible)
+    user = db.query(User).filter(User.email == user_data.email).first()
+
+    if user:
+        user.role = "admin" # Promote
+    else:
+        new_admin = User(
+            email=user_data.email,
+            password_hash="supabase_managed",
+            full_name=user_data.full_name,
+            role="admin", # Force Admin
+            is_active=True
+        )
+        db.add(new_admin)
+
     db.commit()
-    db.refresh(new_admin)
-
-    return {"message": "Admin created successfully", "email": new_admin.email}
+    return {"message": "Admin created successfully", "email": user_data.email}
