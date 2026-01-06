@@ -1,0 +1,23 @@
+# Exclude local environments
+node_modules
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Exclude git
+.git
+.gitignore
+
+# Exclude sensitive files
+.env
+.env.*
+!env_render_final.txt
+*.log
+
+# Exclude IDE folders
+.vscode
+.idea
