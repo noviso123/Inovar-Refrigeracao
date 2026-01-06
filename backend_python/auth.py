@@ -12,48 +12,9 @@ from database import get_db
 from models import User
 from validators import validate_cpf, validate_cnpj
 
-# Configurações JWT
-SECRET_KEY = os.getenv("SECRET_KEY", "sua_chave_secreta_super_segura")
+# Configuração Supabase
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "CIfxVzZteqyj/JG//wd0J/GjnwG3CXZbcZo3uY5NSY+Q/pf8uQawdGPwSKWYNTskULe6jO0TU+zvPXWxzP5yQA==")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 300
-
-# Configuração de Hashing de Senha
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-router = APIRouter(tags=["Authentication"])
-
-# Schemas Pydantic
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class UserCreate(BaseModel):
-    email: str
-    password: str
-    full_name: str
-    role: str = "prestador"
-
-class LoginRequest(BaseModel):
-    Email: str
-    Password: str
-
-# Funções Auxiliares
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
 
 async def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
@@ -62,16 +23,32 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
+        # Verify Supabase JWT
+        # Supabase uses HS256 and the project secret
+        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=[ALGORITHM], options={"verify_act": False})
+        email: str = payload.get("email")
         if email is None:
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        print(f"JWT Verification Failed: {e}")
         raise credentials_exception
 
+    # Lookup user in our local database
     user = db.query(User).filter(User.email == email).first()
+
+    # Auto-sync: If user exists in Supabase (valid token) but not here, create them
     if user is None:
-        raise credentials_exception
+        new_user = User(
+            email=email,
+            full_name=payload.get("user_metadata", {}).get("full_name", email.split('@')[0]),
+            role=payload.get("user_metadata", {}).get("role", "prestador"), # Default role
+            is_active=True,
+            password_hash="supabase_managed" # Placeholder
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        user = new_user
 
     return user
 
@@ -93,41 +70,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/auth/login")
-async def login_json(login_data: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == login_data.Email).first()
-    if not user or not verify_password(login_data.Password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-        )
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "role": user.role, "id": user.id},
-        expires_delta=access_token_expires
-    )
-
-    # Placeholder for empresa_data, assuming it would be fetched or defined elsewhere
-    empresa_data = [] # Or fetch from user.empresas if it's a relationship
-
-    return {
-        "token": access_token,
-        "usuario": {
-            "id": user.id,
-            "email": user.email,
-            "nome_completo": user.full_name,
-            "cargo": user.role,
-            "role": user.role,
-            "telefone": user.phone,
-            "cpf": user.cpf,
-            "is_active": user.is_active,
-            "avatar_url": user.avatar_url,
-            "signature_url": user.signature_url,
-            "assinatura_url": user.signature_url, # Helper alias
-            "empresas": empresa_data
-        }
-    }
+# Legacy Internal Login (Deprecated by Supabase)
+# @router.post("/auth/login")
+# ... removed
 
 @router.post("/register", response_model=Token)
 async def register_user(user: UserCreate, db: Session = Depends(get_db)):

@@ -1,4 +1,5 @@
 import api from './api';
+import { supabase } from './supabase';
 import { Usuario } from '../types';
 
 interface LoginResponse {
@@ -8,25 +9,46 @@ interface LoginResponse {
 
 export const authService = {
     async login(email: string, password: string): Promise<{ token: string; usuario: Usuario }> {
-        const response = await api.post<LoginResponse>('/auth/login', { Email: email, Password: password });
-        const user = response.data.usuario;
-        if (response.data.token && user) {
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(user));
+        // 1. Login with Supabase
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) {
+            throw new Error(error.message);
         }
-        return { token: response.data.token, usuario: user };
+
+        if (!data.session) {
+            throw new Error("Sessão não criada.");
+        }
+
+        const token = data.session.access_token;
+
+        // 2. Set token for API calls
+        localStorage.setItem('token', token);
+
+        // 3. Fetch User Profile from Backend (to get Role, ID, etc)
+        try {
+            const userResponse = await api.get<Usuario>('/auth/me');
+            const user = userResponse.data;
+            localStorage.setItem('user', JSON.stringify(user));
+            return { token, usuario: user };
+        } catch (fetchError) {
+            // If backend fetch fails, logout from supabase to keep state clean
+            await supabase.auth.signOut();
+            throw new Error("Erro ao buscar perfil do usuário no sistema.");
+        }
     },
 
     async googleLogin(token: string): Promise<LoginResponse> {
-        const response = await api.post<LoginResponse>('/auth/google', { token });
-        if (response.data.token) {
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.usuario));
-        }
-        return response.data;
+        // Not used with Supabase (Handled by OAuth redirect), keeping signature for compatibility
+        // or we can implement signInWithOAuth
+        throw new Error("Google Login not yet implemented for Supabase flow");
     },
 
-    logout() {
+    async logout() {
+        await supabase.auth.signOut();
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
