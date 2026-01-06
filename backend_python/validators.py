@@ -1,5 +1,4 @@
 from validate_docbr import CPF, CNPJ
-import pandas as pd
 from fastapi import HTTPException
 import re
 
@@ -20,13 +19,13 @@ def validate_cpf(cpf: str) -> str:
     Returns cleaned CPF (digits only).
     """
     cleaned = clean_digits(cpf)
-    
+
     if not cleaned:
         return None
-        
+
     if not cpf_validator.validate(cleaned):
         raise HTTPException(status_code=400, detail=f"CPF inválido: {cpf}")
-        
+
     return cleaned
 
 def validate_cnpj(cnpj: str) -> str:
@@ -35,13 +34,13 @@ def validate_cnpj(cnpj: str) -> str:
     Returns cleaned CNPJ (digits only).
     """
     cleaned = clean_digits(cnpj)
-    
+
     if not cleaned:
         return None
-        
+
     if not cnpj_validator.validate(cleaned):
         raise HTTPException(status_code=400, detail=f"CNPJ inválido: {cnpj}")
-        
+
     return cleaned
 
 def format_cpf(cpf: str) -> str:

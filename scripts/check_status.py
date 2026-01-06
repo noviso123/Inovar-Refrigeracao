@@ -8,8 +8,8 @@ headers = {
     "Accept": "application/json"
 }
 
-print("Waiting 90s for build...")
-time.sleep(90)
+print("Waiting 60s for build...")
+time.sleep(60)
 
 r = requests.get(
     f"https://api.render.com/v1/services/{SERVICE_ID}/deploys?limit=1",
