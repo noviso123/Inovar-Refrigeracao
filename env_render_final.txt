@@ -1,19 +1,11 @@
-SECRET_KEY=eb96000d58b24abb329129deceacdb8540b8629de37d2c97b4285b8738c26817
+BUCKET_NAME=inovar-files
+DATABASE_URL=postgresql://postgres.apntpretjodygczbeozk:inovar862485@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
+IMGBB_API_KEY=8c9e209f4d405c41879dcc76a7bdd1b6
 PORT=8000
 PYTHON_ENV=production
-STRUCTURED_LOGS=true
-STATIC_DIR=/app/static
-
-# --- SUPABASE DATABASE ---
-# Connection Pooling (Recommended for Render)
-DATABASE_URL=postgresql://postgres.apntpretjodygczbeozk:inovar862485@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
-
-# --- STORAGE (SUPABASE S3) ---
-# Project Ref: apntpretjodygczbeozk
-S3_ENDPOINT=https://apntpretjodygczbeozk.supabase.co/storage/v1/s3
 S3_ACCESS_KEY=apntpretjodygczbeozk
+S3_ENDPOINT=https://apntpretjodygczbeozk.supabase.co/storage/v1/s3
 S3_SECRET_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwbnRwcmV0am9keWdjemJlb3prIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzY5MjMwNCwiZXhwIjoyMDgzMjY4MzA0fQ.XpjvDK7-FUy4Rw5mmWs781vGvylKg83Nsj69v_KS4uw
-BUCKET_NAME=inovar-files
-
-# --- IMGBB (Imagens) ---
-IMGBB_API_KEY=8c9e209f4d405c41879dcc76a7bdd1b6
+SECRET_KEY=eb96000d58b24abb329129deceacdb8540b8629de37d2c97b4285b8738c26817
+STATIC_DIR=/app/static
+STRUCTURED_LOGS=true
