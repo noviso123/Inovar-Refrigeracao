@@ -1,8 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // Backend URL
-export const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/api\/?$/, '');
-export const API_URL = `${API_BASE}/api`;
+// For Monolith (Render), default to '' (relative path) so it hits the same domain.
+export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+export const API_URL = API_BASE ? `${API_BASE}/api` : '/api';
 
 const api = axios.create({
     baseURL: API_URL,
