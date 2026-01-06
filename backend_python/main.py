@@ -314,9 +314,9 @@ def check_whatsapp_health() -> dict:
         return {"status": "unavailable", "error": str(e)}
 
 
-@app.api_route("/", methods=["GET", "HEAD"])
-def health_check_root():
-    """Basic health check for root endpoint"""
+@app.api_route("/api", methods=["GET", "HEAD"])
+def api_root_info():
+    """Basic info for API root"""
     return {
         "status": "ok",
         "brain": "Python FastAPI 🚀",
