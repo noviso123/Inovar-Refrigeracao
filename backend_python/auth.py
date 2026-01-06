@@ -185,3 +185,32 @@ async def google_login(token: dict):
 async def google_link(token: dict):
     """Link Google account to existing user"""
     return {"message": "Conta Google vinculada com sucesso"}
+
+@router.post("/auth/setup-admin")
+async def setup_first_admin(user_data: UserCreate, db: Session = Depends(get_db)):
+    # 1. Verification: Is there ANY admin?
+    existing_admin = db.query(User).filter(User.role == "admin").first()
+    if existing_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Setup already completed. An admin exists."
+        )
+
+    # 2. Check email uniqueness
+    if db.query(User).filter(User.email == user_data.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # 3. Create Admin
+    hashed_password = get_password_hash(user_data.password)
+    new_admin = User(
+        email=user_data.email,
+        password_hash=hashed_password,
+        full_name=user_data.full_name,
+        role="admin", # Force Admin
+        is_active=True
+    )
+    db.add(new_admin)
+    db.commit()
+    db.refresh(new_admin)
+
+    return {"message": "Admin created successfully", "email": new_admin.email}

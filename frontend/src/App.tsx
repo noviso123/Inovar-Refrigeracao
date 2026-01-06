@@ -22,6 +22,7 @@ const Schedule = lazy(() => import('./pages/Agenda').then(module => ({ default: 
 const Clientes = lazy(() => import('./pages/Clientes').then(module => ({ default: module.Clientes })));
 const WhatsApp = lazy(() => import('./pages/WhatsApp').then(module => ({ default: module.WhatsApp })));
 const AdminInvoices = lazy(() => import('./pages/AdminInvoices').then(module => ({ default: module.AdminInvoices })));
+const SetupAdmin = lazy(() => import('./pages/SetupAdmin').then(module => ({ default: module.SetupAdmin })));
 
 import { ScrollToTop } from './components/ScrollToTop';
 
@@ -152,6 +153,7 @@ const AppContent: React.FC = () => {
         return (
             <Routes>
                 <Route path="/login" element={<Login onLogin={handleLogin} />} />
+                <Route path="/setup" element={<Suspense fallback={<PageLoader />}><SetupAdmin /></Suspense>} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         );
