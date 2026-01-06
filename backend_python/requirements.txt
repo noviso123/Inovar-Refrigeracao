@@ -27,3 +27,7 @@ validate-docbr==1.10.0
 python-json-logger==2.0.7
 prometheus-fastapi-instrumentator==6.1.0
 
+
+neonize==0.3.12
+qrcode==7.4.2
+APScheduler==3.10.4

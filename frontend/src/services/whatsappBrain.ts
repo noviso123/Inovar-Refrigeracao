@@ -36,5 +36,10 @@ export const whatsappBrain = {
     reconnect: async () => {
         const response = await api.post('/whatsapp/reconnect');
         return response.data;
+    },
+
+    sendMessage: async (number: string, message: string, mediaUrl?: string) => {
+        const response = await api.post('/whatsapp/send', { number, message, media_url: mediaUrl });
+        return response.data;
     }
 };

@@ -10,13 +10,13 @@ import {
     Camera, PenTool, Eraser, Trash2, Wrench
 } from 'lucide-react';
 import { SecureImage } from '../components/SecureImage';
-import { WhatsAppConnect } from '../components/WhatsAppConnect';
+
 import { useNotification } from '../contexts/ContextoNotificacao';
 import { Usuario, Endereco, Equipamento } from '../types';
 import api from '../services/api';
 import { maskCNPJ, maskPhone, maskCEP, maskCPF } from '../utils/formatadores';
 import { fetchAddressByCEP } from '../services/servicoCep';
-import { whatsappService, WhatsAppInstance } from '../services/whatsappService';
+
 import { AutomacaoSettings } from './AutomacaoSettings';
 import { ModalConfiguracaoNFSe } from '../components/ModalConfiguracaoNFSe';
 
@@ -268,9 +268,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
 
     // Dados da Empresa já declarado acima para evitar erro de inicialização
 
-    // WhatsApp State
-    const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
-    const [creatingWhatsApp, setCreatingWhatsApp] = useState(false);
+
 
     const isAdmin = user?.cargo === 'admin';
     const isPrestador = user?.cargo === 'prestador';
@@ -346,64 +344,11 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
         }
     };
 
-    // WhatsApp Functions
-    const getInstanceName = () => {
-        if (!user) return '';
-        const name = user.nome_completo || 'User';
-        return name.replace(/[^a-zA-Z0-9]/g, '');
-    };
 
-    // WhatsApp Query
-    const { data: whatsAppInstances = [], isLoading: loadingWhatsApp } = useQuery({
-        queryKey: ['whatsapp-instances'],
-        queryFn: async () => {
-            const data = await whatsappService.getInstances();
-            const myInstanceName = getInstanceName();
-            const allInstances = Array.isArray(data) ? data : [];
-            return allInstances.filter((inst: any) =>
-                inst.instance?.instanceName === myInstanceName
-            );
-        },
-        enabled: activeSection === 'whatsapp',
-    });
 
-    // Sync instances state
-    useEffect(() => {
-        if (whatsAppInstances) {
-            setInstances(whatsAppInstances);
-        }
-    }, [whatsAppInstances]);
 
-    const handleCreateInstance = async () => {
-        const instanceName = getInstanceName();
-        if (!instanceName) {
-            notify('Erro ao identificar usuário.', 'error');
-            return;
-        }
 
-        setCreatingWhatsApp(true);
-        try {
-            await whatsappService.createInstance(instanceName);
-            notify('Conexão criada com sucesso!', 'success');
-            queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
-        } catch (error) {
-            notify('Erro ao criar conexão.', 'error');
-        } finally {
-            setCreatingWhatsApp(false);
-        }
-    };
 
-    const handleDeleteInstance = async (instanceName: string) => {
-        if (!confirm(`Tem certeza que deseja excluir a conexão "${instanceName}"?`)) return;
-
-        try {
-            await whatsappService.deleteInstance(instanceName);
-            notify('Conexão removida com sucesso.', 'success');
-            queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
-        } catch (error) {
-            notify('Erro ao remover conexão.', 'error');
-        }
-    };
 
     const handleRequestNotifications = async () => {
         if (!('Notification' in window)) {
@@ -644,7 +589,8 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
         { id: 'assinatura_digital', label: 'Assinatura Digital', icon: PenTool },
         { id: 'equipamentos', label: 'Equipamentos', icon: Wrench },
         ...(isAdmin ? [{ id: 'empresa', label: 'Dados da Empresa', icon: Building }] : []),
-        { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+        // WhatsApp moved to separate page
+
         { id: 'notificacoes', label: 'Notificações', icon: Bell },
         ...(isAdmin ? [{ id: 'fiscal', label: 'NFS-e', icon: FileText }] : []),
         { id: 'automacao', label: 'Automação', icon: SettingsIcon },
@@ -962,55 +908,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
                             </div>
                         )}
 
-                        {/* WhatsApp */}
-                        {activeSection === 'whatsapp' && (
-                            <div className="bg-white rounded-2xl shadow-sm border border-surface-200 p-5">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-lg font-bold text-surface-800 flex items-center gap-2">
-                                        <MessageCircle className="w-5 h-5 text-brand-500" /> Integração WhatsApp
-                                    </h2>
-                                    {instances.length === 0 && !loadingWhatsApp && (
-                                        <Button onClick={handleCreateInstance} disabled={creatingWhatsApp} size="sm">
-                                            {creatingWhatsApp ? 'Criando...' : (
-                                                <>
-                                                    <Plus className="w-4 h-4 mr-1" />
-                                                    Nova Conexão
-                                                </>
-                                            )}
-                                        </Button>
-                                    )}
-                                </div>
 
-                                {loadingWhatsApp ? (
-                                    <div className="flex items-center justify-center py-8">
-                                        <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
-                                    </div>
-                                ) : instances.length === 0 ? (
-                                    <div className="text-center py-8 bg-surface-50 rounded-xl border border-surface-100">
-                                        <MessageCircle className="w-10 h-10 text-surface-300 mx-auto mb-2" />
-                                        <p className="text-surface-600 font-medium">Nenhuma conexão ativa</p>
-                                        <p className="text-sm text-surface-400 mb-4">Conecte seu WhatsApp para enviar mensagens automáticas</p>
-                                        <Button onClick={handleCreateInstance} disabled={creatingWhatsApp}>
-                                            {creatingWhatsApp ? 'Criando...' : 'Criar Minha Conexão'}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {instances.map((inst, idx) => {
-                                            if (!inst?.instance) return null;
-                                            return (
-                                                <div key={inst.instance.instanceName || idx}>
-                                                    <WhatsAppConnect
-                                                        instanceName={inst.instance.instanceName}
-                                                        onDelete={() => handleDeleteInstance(inst.instance.instanceName)}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        )}
 
                         {/* Notificações */}
                         {activeSection === 'notificacoes' && (

@@ -4,7 +4,7 @@ import { Button } from '../components/Botao';
 import { Save, Clock, MessageSquare, Play, AlertCircle, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import { useNotification } from '../contexts/ContextoNotificacao';
-import { whatsappService } from '../services/whatsappService';
+import { whatsappBrain } from '../services/whatsappBrain';
 
 interface Props {
     user: Usuario;
@@ -53,24 +53,16 @@ export function AutomacaoSettings({ user }: Props) {
 
     const loadInstances = async () => {
         try {
-            const data = await whatsappService.getInstances();
-            const allInstances = Array.isArray(data) ? data : [];
+            const status = await whatsappBrain.getStatus();
 
-            const myInstanceName = getInstanceName().toLowerCase();
-
-            const myInstance = allInstances.find((inst: any) => {
-                const name = (inst.instance?.instanceName || inst.instanceName || '').toLowerCase();
-                return name === myInstanceName;
-            });
-
-            if (myInstance) {
-                const instanceName = myInstance.instance?.instanceName;
-                setConfig(prev => ({ ...prev, whatsappInstanceName: instanceName }));
+            if (status && status.status === 'conectado') {
+                setConfig(prev => ({ ...prev, whatsappInstanceName: 'Neonize Brain' }));
             } else {
                 setConfig(prev => ({ ...prev, whatsappInstanceName: '' }));
             }
         } catch (error) {
-            console.error('Erro ao carregar instâncias:', error);
+            console.error('Erro ao carregar status do WhatsApp:', error);
+            setConfig(prev => ({ ...prev, whatsappInstanceName: '' }));
         }
     };
 

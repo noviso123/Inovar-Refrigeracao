@@ -6,7 +6,7 @@ import { formatAddress } from '../utils/formatadores';
 import { FileText, Printer, X, QrCode, AlertTriangle, Wrench, DollarSign, MessageCircle, Loader2, Download, ArrowLeft, CheckCircle } from 'lucide-react';
 import { solicitacaoService } from '../services/solicitacaoService';
 import { pixService } from '../services/pixService';
-import { whatsappService } from '../services/whatsappService';
+import { whatsappBrain } from '../services/whatsappBrain';
 import api from '../services/api';
 import { useNotification } from '../contexts/ContextoNotificacao';
 import html2pdf from 'html2pdf.js';
@@ -183,6 +183,22 @@ export const ServiceDocument: React.FC<Props> = ({ request, type, onClose }) => 
     }
   };
 
+  const generateGoogleCalendarLink = (request: ServiceRequest) => {
+    if (!request.scheduled_at) return null;
+
+    // Default 2 hour duration if not specified
+    const start = new Date(request.scheduled_at);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
+    const formatDate = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+    const title = encodeURIComponent(`Serviço Inovar: ${request.titulo || 'Manutenção'}`);
+    const details = encodeURIComponent(`OS #${request.numero || request.id}\n${request.descricao_detalhada || ''}`);
+    const location = encodeURIComponent(formatAddress(clientData?.endereco) || '');
+
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}&dates=${formatDate(start)}/${formatDate(end)}`;
+  };
+
   const handleSendWhatsApp = async () => {
     const telefone = clientData?.telefone || localRequest.clientes?.telefone;
     if (!telefone) {
@@ -224,6 +240,12 @@ export const ServiceDocument: React.FC<Props> = ({ request, type, onClose }) => 
         mensagem += `🛡️ *Garantia:* 90 dias sobre os serviços executados\n\n`;
       }
 
+      // Adicionar Link do Calendário
+      const calendarLink = generateGoogleCalendarLink(localRequest);
+      if (calendarLink && type !== 'QUOTE') {
+          mensagem += `📅 *Agendamento:* Adicione ao seu calendário:\n${calendarLink}\n\n`;
+      }
+
       // Adicionar PIX se configurado
       if (pixConfig?.chave_pix) {
         mensagem += `💳 *Pagamento via PIX:*\n`;
@@ -242,9 +264,9 @@ export const ServiceDocument: React.FC<Props> = ({ request, type, onClose }) => 
       const numeroLimpo = telefone.replace(/\D/g, '');
       const whatsappNumber = numeroLimpo.length === 11 ? `55${numeroLimpo}` : numeroLimpo;
 
-      // Tentar enviar via API Evolution primeiro
+      // Tentar enviar via Brain
       try {
-        await whatsappService.sendMessage(whatsappNumber, mensagem);
+        await whatsappBrain.sendMessage(whatsappNumber, mensagem);
         notify('Mensagem enviada com sucesso!', 'success');
       } catch (apiError) {
         // Fallback: Abrir WhatsApp Web
@@ -282,13 +304,8 @@ export const ServiceDocument: React.FC<Props> = ({ request, type, onClose }) => 
       const userName = user?.nome || user?.nomeCompleto || user?.nome_completo || user?.name || 'User';
       const userInstanceName = userName.replace(/[^a-zA-Z0-9]/g, '');
 
-      const instances = await whatsappService.getInstances();
-      const myInstance = instances.find(inst =>
-        inst.instance?.instanceName === userInstanceName &&
-        (inst.instance?.status === 'open' || inst.instance?.state === 'open')
-      );
-
-      if (!myInstance) {
+      const status = await whatsappBrain.getStatus();
+      if (!status || status.status !== 'conectado') {
         notify('WhatsApp não conectado. Conecte na página WhatsApp.', 'error');
         return;
       }
@@ -315,6 +332,14 @@ export const ServiceDocument: React.FC<Props> = ({ request, type, onClose }) => 
       });
 
       const docFileName = type === 'QUOTE' ? `Orcamento_${docNumber}.pdf` : `OrdemServico_${docNumber}.pdf`;
+
+      // Upload PDF first
+      notify('Fazendo upload do documento...', 'info');
+      const formData = new FormData();
+      formData.append('file', pdfBlob, docFileName);
+
+      const uploadRes = await api.post('/upload', formData);
+      const pdfUrl = uploadRes.data.url;
 
       // Construir mensagem detalhada
       let messageDetails = '';
@@ -354,20 +379,18 @@ export const ServiceDocument: React.FC<Props> = ({ request, type, onClose }) => 
         messageDetails += `_${companyInfo.name}_`;
       }
 
-      await api.post('/whatsapp/send-quote', {
-        number: `55${phone}`,
-        quoteDetails: messageDetails,
-        pixKey: type === 'QUOTE' ? pixConfig?.chave_pix : null,
-        pdfBase64,
-        fileName: docFileName,
-        osId: localRequest.id || localRequest.numero,
-        instanceName: userInstanceName,
-        documentType: type // QUOTE ou REPORT
-      });
+      await whatsappBrain.sendMessage(`55${phone}`, messageDetails, pdfUrl);
+
+      // Se for orçamento e tiver pix, mandar chave em seguida
+      if (type === 'QUOTE' && pixConfig?.chave_pix) {
+         const pixMsg = `Chave PIX: ${pixConfig.chave_pix}`;
+         await whatsappBrain.sendMessage(`55${phone}`, pixMsg);
+      }
 
       notify('Enviado com sucesso via WhatsApp! 🎉', 'success');
     } catch (error: any) {
-      notify(`Erro ao enviar: ${error.message || 'Verifique WhatsApp.'}`, 'error');
+      console.error(error);
+      notify(`Erro ao enviar: ${error.message || 'Verifique conexão.'}`, 'error');
     } finally {
       setSendingWhatsApp(false);
     }

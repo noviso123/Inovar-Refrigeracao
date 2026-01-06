@@ -21,7 +21,7 @@ import { ServiceCompletionWizard } from '../components/ServiceCompletionWizard';
 import { useNotification } from '../contexts/ContextoNotificacao';
 import { formatarData } from '../utils/formatadores';
 import api from '../services/api';
-import { whatsappService } from '../services/whatsappService';
+import { whatsappBrain } from '../services/whatsappBrain';
 
 interface Props {
     request: SolicitacaoServico;
@@ -172,7 +172,7 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
 
                     const osMessage = `✅ *Serviço Concluído!*\n\nOlá ${request.cliente?.nome || 'Cliente'}!\n\nSeu serviço foi finalizado com sucesso.\n\n📋 *OS:* #${request.sequential_id || request.id}\n📝 *Título:* ${request.titulo}\n💰 *Valor:* R$ ${(request.valor_total || 0).toFixed(2)}${nfseInfo}\n\nObrigado pela preferência! 🙏`;
 
-                    await whatsappService.sendMessage(clientePhone, osMessage);
+                    await whatsappBrain.sendMessage(`55${clientePhone}`, osMessage);
                     notify('Mensagem de conclusão enviada via WhatsApp!', 'success');
                 } catch (whatsappError) {
                     console.error('Erro ao enviar WhatsApp:', whatsappError);
@@ -346,31 +346,7 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
                     const userInstanceName = userName.replace(/[^a-zA-Z0-9]/g, '');
                     const companyName = currentUser?.empresas?.nomeFantasia || currentUser?.empresas?.nome_fantasia || 'Inovar Refrigeração';
 
-                    // Verificar se há instância conectada
-                    const instances = await whatsappService.getInstances();
-                    const myInstance = instances.find(inst =>
-                        inst.instance?.instanceName === userInstanceName &&
-                        (inst.instance?.status === 'open' || (inst.instance as any)?.state === 'open')
-                    );
-
-                    if (myInstance) {
-                        const dataFormatada = new Date(newDate).toLocaleDateString('pt-BR', {
-                            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        });
-
-                        const mensagem = `Olá ${request.cliente?.nome?.split(' ')[0] || 'Cliente'}!
-
-📅 *AGENDAMENTO CONFIRMADO*
-
-Seu serviço foi agendado para:
-*${dataFormatada}*
-
-OS: #${request.sequential_id || request.id}
-Serviço: ${request.titulo || 'Manutenção'}
-
-_${companyName}_`;
-
-                        await whatsappService.sendText(`55${clientPhone}`, mensagem, userInstanceName);
+                        await whatsappBrain.sendMessage(`55${clientPhone}`, mensagem);
                         notify('Cliente notificado via WhatsApp! 📱', 'success');
                     }
                 } catch (whatsappError) {

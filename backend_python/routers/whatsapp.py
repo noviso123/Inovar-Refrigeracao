@@ -88,5 +88,29 @@ def update_config(config: ConfigUpdate, db: Session = Depends(get_db)):
 def reconnect():
     """Forces a reconnection logic."""
     # Since Brain runs in a loop, we can perhaps toggle active state or restart client?
-    # For now, simplistic approach
-    return {"message": "Use Restart Service for full reconnection"}
+
+class MessageSend(BaseModel):
+    number: str
+    message: str
+    media_url: Optional[str] = None
+
+@router.post("/send")
+def send_message_api(msg: MessageSend, db: Session = Depends(get_db)):
+    """Enqueues a message to be sent by the Brain."""
+    try:
+        # Basic validation (remove non-digits)
+        clean_number = "".join(filter(str.isdigit, msg.number))
+
+        sql = text("""
+            INSERT INTO fila_envio (numero, mensagem, media_url, status)
+            VALUES (:numero, :mensagem, :media_url, 'pendente')
+        """)
+        db.execute(sql, {
+            "numero": clean_number,
+            "mensagem": msg.message,
+            "media_url": msg.media_url
+        })
+        db.commit()
+        return {"message": "Message enqueued successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

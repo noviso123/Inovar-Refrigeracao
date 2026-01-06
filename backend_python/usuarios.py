@@ -27,6 +27,7 @@ class UserResponse(BaseModel):
     cpf: Optional[str] = None
     avatar_url: Optional[str] = None
     signature_base64: Optional[str] = None
+    automacao: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -46,7 +47,9 @@ class UserUpdateRequest(BaseModel):
     telefone: Optional[str] = None
     cpf: Optional[str] = None
     avatar_url: Optional[str] = None
+    avatar_url: Optional[str] = None
     signature_url: Optional[str] = None
+    automacao: Optional[dict] = None
 
 # Routes
 @router.get("/usuarios", response_model=List[UserResponse])
@@ -85,6 +88,7 @@ def update_user(user_id: int, user_data: UserUpdateRequest, db: Session = Depend
     if user_data.cpf is not None: db_user.cpf = user_data.cpf
     if user_data.avatar_url is not None: db_user.avatar_url = user_data.avatar_url
     if user_data.signature_base64 is not None: db_user.signature_base64 = user_data.signature_base64
+    if user_data.automacao is not None: db_user.automacao = user_data.automacao
 
     db.commit()
     db.refresh(db_user)

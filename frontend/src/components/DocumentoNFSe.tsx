@@ -7,7 +7,7 @@ import { FileText, Printer, Download, X, MessageCircle, QrCode, ArrowLeft, Loade
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 import { useNotification } from '../contexts/ContextoNotificacao';
-import { whatsappService } from '../services/whatsappService';
+import { whatsappBrain } from '../services/whatsappBrain';
 import api from '../services/api';
 
 interface Props {
@@ -180,14 +180,60 @@ export const DocumentoNFSe: React.FC<Props> = ({ request, onClose }) => {
             notify('Tomador sem telefone cadastrado.', 'warning');
             return;
         }
-        setSendingWhatsApp(true);
+
         try {
+            setSendingWhatsApp(true);
+
+            // 1. Check Connection Status
+            const status = await whatsappBrain.getStatus();
             const phone = tomador.telefone.replace(/\D/g, '');
-            const message = encodeURIComponent(`Olá ${tomador.nome}! Segue sua NFS-e #${request.nfse?.numero || request.id}.`);
-            window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
-            notify('WhatsApp Web aberto.', 'info');
+            const cleanPhone = phone.length === 11 ? `55${phone}` : phone;
+            const message = `Olá ${tomador.nome}! Segue sua NFS-e #${request.nfse?.numero || request.id}.`;
+
+
+            if (!status || status.status !== 'conectado') {
+                // Fallback to Web if not connected
+                console.warn('Neonize Brain not connected. Floating to WhatsApp Web.');
+                window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+                notify('WhatsApp não conectado no sistema. Abrindo Web...', 'warning');
+                return;
+            }
+
+            // 2. Generate PDF Blob
+            notify('Gerando documento para envio...', 'info');
+            const element = reportRef.current;
+            if (!element) throw new Error('Elemento do relatório não encontrado');
+
+            const pdfBlob = await html2pdf().set({
+                margin: 0,
+                filename: `NFSe_${request.nfse?.numero || request.id}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).output('blob');
+
+            // 3. Upload PDF
+            notify('Enviando para o servidor...', 'info');
+            const formData = new FormData();
+            formData.append('file', pdfBlob, `NFSe_${request.nfse?.numero || request.id}.pdf`);
+            const uploadRes = await api.post('/upload', formData);
+            const pdfUrl = uploadRes.data.url;
+
+            // 4. Send via Brain
+            notify('Enviando mensagem...', 'info');
+            await whatsappBrain.sendMessage(cleanPhone, message, pdfUrl);
+
+            notify('NFS-e enviada com sucesso! 🎉', 'success');
+
         } catch (error: any) {
+            console.error('Erro ao enviar WhatsApp:', error);
             notify(`Erro ao enviar: ${error.message}`, 'error');
+             // Last resort fallback
+             const tomador = getTomador();
+             const phone = tomador?.telefone?.replace(/\D/g, '') || '';
+             if (phone) {
+                 window.open(`https://wa.me/55${phone}`, '_blank');
+             }
         } finally {
             setSendingWhatsApp(false);
         }

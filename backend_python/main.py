@@ -48,13 +48,16 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 from auth import router as auth_router
-from whatsapp import router as whatsapp_router
+from routers.whatsapp import router as whatsapp_router
 from solicitacoes import router as solicitacoes_router
 from usuarios import router as usuarios_router
 from dashboard import router as dashboard_router
 from clientes import router as clientes_router
 from extra_routes import router as extra_router
 from equipamentos import router as equipamentos_router
+from routers.whatsapp import router as whatsapp_router
+from whatsapp_engine import brain
+from scheduler import start_scheduler
 
 # Redis Utilities
 from redis_utils import (
@@ -192,7 +195,13 @@ async def rate_limit_middleware(request: Request, call_next):
 # Inicialização: Criar Bucket e Tabelas DB
 @app.on_event("startup")
 async def startup_event():
-    pass
+    # Start WhatsApp Brain
+    print("🧠 Starting WhatsApp Brain...")
+    print("🧠 Starting WhatsApp Brain...")
+    await brain.start()
+
+    # Start Scheduler
+    start_scheduler()
 
     # Then init DB (creates any missing tables)
     try:
@@ -450,6 +459,7 @@ app.include_router(dashboard_router, prefix="/api")
 app.include_router(clientes_router, prefix="/api")
 app.include_router(extra_router, prefix="/api")
 app.include_router(equipamentos_router, prefix="/api")
+
 
 
 # ============= WEBSOCKET NOTIFICATIONS =============

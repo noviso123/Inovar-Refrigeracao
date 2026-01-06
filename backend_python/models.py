@@ -40,6 +40,7 @@ class User(Base):
     avatar_url = Column(String, nullable=True)
     signature_url = Column(Text, nullable=True) # Was signature_base64
     address_json = Column(JSON, nullable=True)
+    automacao = Column(JSON, nullable=True) # { "lembreteManutencao": bool, "intervaloMeses": int, "templateMensagem": str, "whatsappInstanceName": str }
 
     # Relationships
     service_orders = relationship("ServiceOrder", back_populates="user")
