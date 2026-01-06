@@ -246,14 +246,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegisterCompanyClick })
             {/* Link para registro */}
             <div className="mt-6 pt-6 border-t border-surface-100">
               <p className="text-center text-sm text-surface-500 mb-4">
-                Não tem uma conta?
+                Esqueceu sua senha?
               </p>
               <button
-                onClick={onRegisterCompanyClick}
-                disabled={isLoading}
-                className="btn btn-secondary w-full"
+                type="button"
+                onClick={() => alert('Entre em contato com o administrador.')}
+                className="font-medium text-blue-600 hover:text-blue-500 transition-colors w-full text-center"
               >
-                Criar Conta (Empresa)
+                Recuperar acesso
               </button>
             </div>
           </div>

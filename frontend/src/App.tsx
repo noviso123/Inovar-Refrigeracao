@@ -6,8 +6,6 @@ import { solicitacaoService } from './services/solicitacaoService';
 import api from './services/api'; // Ainda usado para chamadas genéricas se necessário
 import { LayoutPrincipal } from './components/LayoutPrincipal';
 import { Login } from './pages/Login';
-import { CadastroEmpresa } from './pages/CadastroEmpresa';
-import { SubscriptionLocked } from './pages/SubscriptionLocked';
 import { Users as GerenciarTecnicos } from './pages/Usuarios';
 import { NotificationProvider, useNotification } from './contexts/ContextoNotificacao';
 import { Loader2 } from 'lucide-react';
@@ -26,10 +24,6 @@ const Clientes = lazy(() => import('./pages/Clientes').then(module => ({ default
 const WhatsApp = lazy(() => import('./pages/WhatsApp').then(module => ({ default: module.WhatsApp })));
 
 
-const GestaoPlanos = lazy(() => import('./pages/GestaoPlanos'));
-const MinhaAssinatura = lazy(() => import('./pages/MinhaAssinatura').then(module => ({ default: module.SubscriptionSettings })));
-const GestaoAssinaturas = lazy(() => import('./pages/GestaoAssinaturas'));
-const GestaoEmpresas = lazy(() => import('./pages/GestaoEmpresas'));
 const AdminInvoices = lazy(() => import('./pages/AdminInvoices').then(module => ({ default: module.AdminInvoices })));
 
 import { SubscriptionGuard } from './components/SubscriptionGuard';
@@ -186,8 +180,6 @@ const AppContent: React.FC = () => {
         return (
             <Routes>
                 <Route path="/login" element={<Login onLogin={handleLogin} onRegisterCompanyClick={() => navigate('/register')} />} />
-                <Route path="/register" element={<CadastroEmpresa onBackToLogin={() => navigate('/login')} onRegister={(data) => console.log('Register company:', data)} />} />
-                <Route path="/subscription-locked" element={<SubscriptionLocked />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         );
@@ -222,17 +214,12 @@ const AppContent: React.FC = () => {
 
                     {/* Super Admin Routes - Only administrative screens */}
                     <Route path="/admin/*" element={
-                        <RequireRole allowedRoles={['super_admin']} user={user}>
+                        <RequireRole allowedRoles={['super_admin', 'admin']} user={user}>
                             <Routes>
                                 <Route path="financeiro" element={<Finance requests={requests} />} />
                                 <Route path="notas-fiscais" element={<AdminInvoices />} />
                                 <Route path="qrcode" element={<QrCodeGenerator />} />
                                 <Route path="configuracoes" element={<Settings user={user} onUpdateUser={handleUpdateUser} />} />
-
-                                {/* Admin Planos e Assinaturas não precisam de Guard pois são de gestão */}
-                                <Route path="planos" element={<GestaoPlanos user={user} />} />
-                                <Route path="assinaturas" element={<GestaoAssinaturas user={user} />} />
-                                <Route path="empresas" element={<GestaoEmpresas user={user} />} />
                                 <Route path="usuarios" element={<GerenciarTecnicos />} />
                             </Routes>
                         </RequireRole>

@@ -8,55 +8,7 @@ export type StatusOS = 'pendente' | 'agendado' | 'em_andamento' | 'concluido' | 
 export type PrioridadeOS = 'baixa' | 'media' | 'alta' | 'critica';
 export type TipoServicoOS = 'preventiva' | 'corretiva' | 'instalacao' | 'inspecao' | 'orcamento';
 
-// ============================================================================
-// TIPOS DE ASSINATURA (SaaS)
-// ============================================================================
-export type StatusAssinatura = 'ativa' | 'pendente' | 'vencida' | 'cancelada';
-
-export interface PlanoAssinatura {
-  id: string;
-  nome: string;
-  descricao: string;
-  valorMensal: number;
-  recursos: string[];
-  limiteClientes?: number;
-  limiteServicos?: number;
-  limiteTecnicos?: number;
-  targetUserId?: number; // ID do usuário para planos exclusivos
-  ativo: boolean;
-  criadoEm: string;
-  atualizadoEm: string;
-}
-
-export interface Assinatura {
-  id: string;
-  numero?: number;
-  prestadorId: string;
-  planoId: string;
-  plano?: PlanoAssinatura;
-  status: StatusAssinatura;
-  valorMensal: number;
-  dataInicio: string;
-  dataVencimento: string;
-  dataRenovacao?: string;
-  ultimoPagamentoId?: string;
-  metodoPagamento: 'pix';
-  criadoEm: string;
-  atualizadoEm: string;
-}
-
-export interface PagamentoAssinatura {
-  id: string;
-  assinaturaId: string;
-  prestadorId: string;
-  valor: number;
-  status: 'pendente' | 'confirmado' | 'cancelado';
-  pixCopiaECola?: string;
-  qrCodeBase64?: string;
-  comprovanteUrl?: string;
-  dataPagamento?: string;
-  criadoEm: string;
-}
+// Subscription types removed
 
 export interface Endereco {
   id?: number;
@@ -72,9 +24,9 @@ export interface Endereco {
 
 export interface Usuario {
   id: number | string; // Firebase uses string IDs
-  empresa_id?: number | string;
-  empresaId?: string; // Firebase camelCase alias
-  empresas?: Empresa;
+  // empresa_id removed
+  // empresaId removed
+  // empresas removed
   email: string;
   nome_completo: string;
   nomeCompleto?: string; // Firebase camelCase alias

@@ -9,7 +9,7 @@ import logging
 from database import get_db
 from models import ServiceOrder, User, Client, ItemOS, Equipment
 from auth import get_current_user
-from plan_limits import check_service_limit
+from auth import get_current_user
 from redis_utils import get_cache, set_cache, delete_cache
 
 logger = logging.getLogger(__name__)
@@ -151,9 +151,9 @@ def get_solicitacoes(
     
     query = db.query(ServiceOrder)
     
-    # Filtro por empresa
-    if current_user.role != "super_admin":
-        query = query.filter(ServiceOrder.company_id == current_user.company_id)
+    # Filtro por empresa (REMOVIDO - Single Tenant)
+    # if current_user.role != "super_admin":
+    #    query = query.filter(ServiceOrder.company_id == current_user.company_id)
     
     # Filtro por status
     if status:
@@ -253,7 +253,8 @@ def get_solicitacao(order_id: int, current_user: User = Depends(get_current_user
     query = db.query(ServiceOrder).filter(ServiceOrder.id == order_id)
     
     if current_user.role != "super_admin":
-        query = query.filter(ServiceOrder.company_id == current_user.company_id)
+        # query = query.filter(ServiceOrder.company_id == current_user.company_id)
+        pass
         
     order = query.first()
     if not order:
@@ -358,7 +359,7 @@ class ServiceOrderCreate(BaseModel):
     titulo: str = Field(..., alias="title")
     descricao: Optional[str] = Field(None, alias="description")
     descricao_detalhada: Optional[str] = Field(None, alias="descricao_detalhada")
-    empresaId: Optional[Union[int, str]] = Field(None, alias="company_id")
+    # empresaId: Optional[Union[int, str]] = Field(None, alias="company_id")
     clienteId: int = Field(..., alias="client_id")
     tecnicoId: Optional[int] = Field(None, alias="technician_id")
     equipamentoId: Optional[int] = Field(None, alias="equipment_id")
@@ -410,10 +411,6 @@ class ServiceOrderUpdate(BaseModel):
 
 @router.post("/solicitacoes", response_model=ServiceOrderResponse)
 def create_solicitacao(order: ServiceOrderCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Check plan limits
-    if current_user.company_id:
-        check_service_limit(db, current_user.company_id)
-        
     # Parse date
     scheduled_date = None
     if order.dataAgendada:
@@ -422,23 +419,16 @@ def create_solicitacao(order: ServiceOrderCreate, current_user: User = Depends(g
         except:
             pass
 
-    # Determine Company ID
-    company_id = current_user.company_id
-    if current_user.role == "super_admin":
-        if order.empresaId:
-            company_id = order.empresaId
-        else:
-            # If SuperAdmin and no company specified, try to infer or error?
-            # For now, let's require it or fallback to user's company if exists
-            if not company_id:
-                 raise HTTPException(status_code=400, detail="SuperAdmin deve especificar a empresa (company_id) para criar uma OS.")
+    # Determine Company ID (Single Tenant: Always 1 or user's company)
+    # company_id = current_user.company_id or 1
+    # NO COMPANY ID ANYMORE
 
     # Calculate sequential_id
     sequential_id = 1
-    if company_id:
-        max_id = db.query(func.max(ServiceOrder.sequential_id)).filter(ServiceOrder.company_id == company_id).scalar()
-        if max_id:
-            sequential_id = max_id + 1
+    # if company_id:
+    max_id = db.query(func.max(ServiceOrder.sequential_id)).scalar()
+    if max_id:
+        sequential_id = max_id + 1
 
     # Auto-assign if technician
     technician_id = order.tecnicoId
@@ -458,7 +448,7 @@ def create_solicitacao(order: ServiceOrderCreate, current_user: User = Depends(g
         data_agendamento_inicio=scheduled_date,
         created_at=datetime.now(),
         total_value=0.0,
-        company_id=company_id,
+        # company_id=company_id,
         sequential_id=sequential_id,
         historico_json=[{
             "data": datetime.now().isoformat(),
@@ -502,7 +492,7 @@ def create_solicitacao(order: ServiceOrderCreate, current_user: User = Depends(g
             order_id=db_order.sequential_id or db_order.id,
             order_title=order.titulo,
             client_name=client_name,
-            company_id=current_user.company_id,
+            company_id=1, # Default
             created_by_id=current_user.id
         )
         
@@ -513,7 +503,7 @@ def create_solicitacao(order: ServiceOrderCreate, current_user: User = Depends(g
                 order_id=db_order.sequential_id or db_order.id,
                 order_title=order.titulo,
                 technician_id=technician_id,
-                company_id=current_user.company_id
+                company_id=1 # Default
             )
     except Exception as e:
         logger.error(f"Error creating notifications: {e}")
@@ -613,7 +603,7 @@ def update_solicitacao(order_id: int, order: ServiceOrderUpdate, current_user: U
                 order_id=db_order.sequential_id or db_order.id,
                 order_title=db_order.title or "",
                 technician_id=order.tecnicoId,
-                company_id=current_user.company_id
+                company_id=1
             )
         
         # Status mudou para concluído
@@ -625,7 +615,7 @@ def update_solicitacao(order_id: int, order: ServiceOrderUpdate, current_user: U
                 order_id=db_order.sequential_id or db_order.id,
                 order_title=db_order.title or "",
                 technician_name=tech_name,
-                company_id=current_user.company_id
+                company_id=1
             )
     except Exception as e:
         logger.error(f"Error creating update notifications: {e}")

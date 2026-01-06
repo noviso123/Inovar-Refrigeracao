@@ -43,7 +43,7 @@ def get_users(
     db: Session = Depends(get_db)
 ):
     # Cache key
-    cache_key = f"cache:usuarios:list:{current_user.company_id}:{skip}:{limit}"
+    cache_key = f"cache:usuarios:list:global:{skip}:{limit}"
     cached = get_cache(cache_key)
     if cached:
         logger.debug("Cache HIT: usuarios")
@@ -51,7 +51,8 @@ def get_users(
     
     query = db.query(User)
     if current_user.role != "super_admin":
-        query = query.filter(User.company_id == current_user.company_id)
+        # query = query.filter(User.company_id == current_user.company_id)
+        pass
         
     users = query.offset(skip).limit(limit).all()
     
@@ -66,7 +67,7 @@ def get_users(
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "criado_em": u.created_at.isoformat() if u.created_at else None,
             "criadoEm": u.created_at.isoformat() if u.created_at else None,
-            "assinaturaAtiva": u.role == "super_admin",
+            "assinaturaAtiva": True,
             "telefone": u.phone,
             "cpf": u.cpf,
             "avatar_url": u.avatar_url,
@@ -82,7 +83,8 @@ def get_user(user_id: int, current_user: User = Depends(get_current_user), db: S
     query = db.query(User).filter(User.id == user_id)
     
     if current_user.role != "super_admin":
-        query = query.filter(User.company_id == current_user.company_id)
+        # query = query.filter(User.company_id == current_user.company_id)
+        pass
         
     user = query.first()
     if not user:
@@ -97,7 +99,7 @@ def get_user(user_id: int, current_user: User = Depends(get_current_user), db: S
         "created_at": user.created_at,
         "criado_em": user.created_at,
         "criadoEm": user.created_at,
-        "assinaturaAtiva": user.role == "super_admin",
+        "assinaturaAtiva": True,
         "telefone": user.phone,
         "cpf": user.cpf,
         "avatar_url": user.avatar_url,

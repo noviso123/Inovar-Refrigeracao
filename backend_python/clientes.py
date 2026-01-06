@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 from auth import get_current_user
 from models import User
-from plan_limits import check_client_limit
 from validators import validate_cpf, validate_cnpj, format_cpf, format_cnpj
 
 router = APIRouter()
@@ -31,7 +30,7 @@ class ClientBase(BaseModel):
     complemento: Optional[str] = None
     bairro: Optional[str] = None
     periodoManutencaoMeses: Optional[int] = None
-    company_id: Optional[int] = None
+    # company_id: Optional[int] = None
 
 class ClientCreate(ClientBase):
     pass
@@ -47,7 +46,7 @@ class ClientResponse(ClientBase):
 def list_clients(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # Try cache first (TTL: 2 minutes)
     # Cache key must include company_id for isolation!
-    cache_key = f"cache:clientes:list:{current_user.company_id}"
+    cache_key = f"cache:clientes:list:global"
     cached = get_cache(cache_key)
     if cached:
         logger.debug("Cache HIT: clientes list")
@@ -56,7 +55,8 @@ def list_clients(current_user: User = Depends(get_current_user), db: Session = D
     # Query database with isolation
     query = db.query(Client)
     if current_user.role != "super_admin":
-        query = query.filter(Client.company_id == current_user.company_id)
+        # query = query.filter(Client.company_id == current_user.company_id)
+        pass
         
     clients = query.all()
     
@@ -87,14 +87,9 @@ def list_clients(current_user: User = Depends(get_current_user), db: Session = D
 
 @router.post("/clientes", response_model=ClientResponse)
 def create_client(client: ClientCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Determine Company ID
-    company_id = current_user.company_id
-    if current_user.role == "super_admin" and client.company_id:
-        company_id = client.company_id
-    
-    # Check plan limits (only for non-super_admin)
-    if current_user.role != "super_admin" and company_id:
-        check_client_limit(db, company_id)
+    # Determine Company ID (Single Tenant)
+    # company_id = current_user.company_id or 1
+    # NO COMPANY ID
         
     document = None
     if client.cpf:
@@ -105,7 +100,7 @@ def create_client(client: ClientCreate, current_user: User = Depends(get_current
     # Check if document already exists for this company
     if document:
         existing = db.query(Client).filter(
-            Client.company_id == company_id,
+            # Client.company_id == company_id,
             Client.document == document
         ).first()
         if existing:
@@ -113,10 +108,10 @@ def create_client(client: ClientCreate, current_user: User = Depends(get_current
 
     # Calculate sequential_id
     sequential_id = 1
-    if company_id:
-        max_id = db.query(func.max(Client.sequential_id)).filter(Client.company_id == company_id).scalar()
-        if max_id:
-            sequential_id = max_id + 1
+    # if company_id:
+    max_id = db.query(func.max(Client.sequential_id)).scalar()
+    if max_id:
+        sequential_id = max_id + 1
 
     # Map frontend fields to backend model
     db_client = Client(
@@ -132,7 +127,7 @@ def create_client(client: ClientCreate, current_user: User = Depends(get_current
         complement=client.complemento,
         neighborhood=client.bairro,
         maintenance_period=client.periodoManutencaoMeses,
-        company_id=company_id,
+        # company_id=company_id,
         sequential_id=sequential_id
     )
     db.add(db_client)
@@ -166,7 +161,8 @@ def get_client(client_id: int, current_user: User = Depends(get_current_user), d
     query = db.query(Client).filter(Client.id == client_id)
     
     if current_user.role != "super_admin":
-        query = query.filter(Client.company_id == current_user.company_id)
+        # query = query.filter(Client.company_id == current_user.company_id)
+        pass
         
     c = query.first()
     if not c:
@@ -210,7 +206,8 @@ def update_client(client_id: int, client: ClientUpdate, current_user: User = Dep
     query = db.query(Client).filter(Client.id == client_id)
     
     if current_user.role != "super_admin":
-        query = query.filter(Client.company_id == current_user.company_id)
+        # query = query.filter(Client.company_id == current_user.company_id)
+        pass
         
     db_client = query.first()
     if not db_client:
@@ -263,7 +260,8 @@ def delete_client(client_id: int, current_user: User = Depends(get_current_user)
     query = db.query(Client).filter(Client.id == client_id)
     
     if current_user.role != "super_admin":
-        query = query.filter(Client.company_id == current_user.company_id)
+        # query = query.filter(Client.company_id == current_user.company_id)
+        pass
         
     db_client = query.first()
     if not db_client:
