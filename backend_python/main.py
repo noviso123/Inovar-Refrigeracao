@@ -540,6 +540,34 @@ if os.path.exists("frontend/dist"):
 else:
     logger.warning("⚠️ frontend/dist directory not found. Frontend will not be served.")
 
+
+# ============= SERVING FRONTEND =============
+# Mount frontend/dist to serve static files
+# In Docker, we copy dist to /app/static
+STATIC_DIR = os.getenv("STATIC_DIR", "static")
+
+if os.path.exists(STATIC_DIR):
+    logger.info(f"📁 Serving static files from {STATIC_DIR}")
+
+    # Serve assets folder
+    if os.path.exists(os.path.join(STATIC_DIR, "assets")):
+        app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+
+    # Serve other static resources if needed
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+
+    @app.exception_handler(404)
+    async def custom_404_handler(request: Request, exc: HTTPException):
+        # Allow API 404s to pass through
+        if request.url.path.startswith("/api") or request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
+             return await http_exception_handler(request, exc)
+
+        # Fallback to index.html for frontend routes (SPA)
+        index_path = os.path.join(STATIC_DIR, "index.html")
+        if os.path.exists(index_path):
+             return FileResponse(index_path)
+        return await http_exception_handler(request, exc)
+
 if __name__ == "__main__":
     import uvicorn
     host = os.getenv("HOST", "127.0.0.1")
