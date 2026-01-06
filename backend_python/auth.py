@@ -16,6 +16,9 @@ from validators import validate_cpf, validate_cnpj
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "CIfxVzZteqyj/JG//wd0J/GjnwG3CXZbcZo3uY5NSY+Q/pf8uQawdGPwSKWYNTskULe6jO0TU+zvPXWxzP5yQA==")
 ALGORITHM = "HS256"
 
+# Define OAuth2 scheme for Swagger UI and dependency injection
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 async def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
