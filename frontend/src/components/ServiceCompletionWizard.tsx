@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Camera, PenTool, CheckCircle, ChevronRight, ChevronLeft, Wand2, Loader2, X, FileText, Send, Ban, Receipt, AlertTriangle, RefreshCw, DollarSign } from 'lucide-react';
+import { Camera, PenTool, CheckCircle, ChevronRight, ChevronLeft, Wand2, Loader2, X, FileText, Paperclip, Send, Ban, Receipt, AlertTriangle, RefreshCw, DollarSign } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { Button } from './Botao';
 import { CanvasAssinatura } from './CanvasAssinatura';
@@ -180,14 +180,24 @@ Recomendações:
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                if (event.target?.result) {
-                    setPhotos(prev => [...prev, event.target!.result as string]);
-                }
-            };
-            reader.readAsDataURL(file);
+            const files = Array.from(e.target.files);
+            setLoading(true); // Reuse loading state for upload spinner
+
+            try {
+                const { uploadFile } = await import('../services/uploadService');
+                const uploadPromises = files.map(file => uploadFile(file, 'completion-evidence'));
+                const urls = await Promise.all(uploadPromises);
+
+                setPhotos(prev => [...prev, ...urls]);
+                notify('Foto(s) enviada(s) com sucesso!', 'success');
+            } catch (error) {
+                console.error(error);
+                notify('Erro ao enviar fotos. Tente novamente.', 'error');
+            } finally {
+                setLoading(false);
+                // Reset input
+                e.target.value = '';
+            }
         }
     };
 
@@ -285,6 +295,31 @@ Recomendações:
         setStep('nfse');
     };
 
+    const handleSignatureSave = async (base64: string, type: 'tech' | 'client') => {
+        setLoading(true);
+        try {
+            // Convert Base64 to File
+            const res = await fetch(base64);
+            const blob = await res.blob();
+            const filename = `signature_${type}_${Date.now()}.png`;
+            const file = new File([blob], filename, { type: 'image/png' });
+
+            // Upload
+            const { uploadFile } = await import('../services/uploadService');
+            const url = await uploadFile(file, 'signatures');
+
+            if (type === 'tech') setTechSignature(url);
+            else setClientSignature(url);
+
+            notify('Assinatura salva e enviada!', 'success');
+        } catch (error) {
+            console.error(error);
+            notify('Erro ao salvar assinatura.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useBodyScrollLock(isOpen);
 
     if (!isOpen) return null;
@@ -362,34 +397,45 @@ Recomendações:
                     {/* Step 2: Photos */}
                     {step === 'photos' && (
                         <div className="space-y-4 animate-fade-in">
-                            <h3 className="text-lg font-bold text-surface-800">2. Evidências Fotográficas</h3>
-                            <p className="text-surface-500 text-sm">Adicione fotos do serviço (opcional).</p>
+                            <h3 className="text-lg font-bold text-surface-800">2. Evidências</h3>
+                            <p className="text-surface-500 text-sm">Adicione fotos ou documentos do serviço (opcional).</p>
 
                             <div className="grid grid-cols-3 gap-4">
-                                {photos.map((photo, idx) => (
-                                    <div key={idx} className="aspect-square bg-surface-100 rounded-xl overflow-hidden relative group shadow-sm">
-                                        <img src={photo} className="w-full h-full object-cover" alt={`Foto ${idx + 1}`} />
-                                        <button
-                                            onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
-                                            className="absolute top-2 right-2 bg-red-500 text-white rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))}
+                                {photos.map((photo, idx) => {
+                                    const isImg = photo.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i) || photo.startsWith('data:image') || photo.includes('imgbb.com');
+                                    return (
+                                        <div key={idx} className="aspect-square bg-surface-100 rounded-xl overflow-hidden relative group shadow-sm border border-surface-200">
+                                            {isImg ? (
+                                                <img src={photo} className="w-full h-full object-cover" alt={`Foto ${idx + 1}`} />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-surface-400">
+                                                    <FileText className="w-8 h-8 mb-2" />
+                                                    <span className="text-[10px] font-bold uppercase">Documento</span>
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
+                                                className="absolute top-2 right-2 bg-red-500 text-white rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
                                     className="aspect-square bg-surface-50 border-2 border-dashed border-surface-300 rounded-xl flex flex-col items-center justify-center text-surface-400 hover:bg-surface-100 hover:border-brand-500 hover:text-brand-500 transition-all"
                                 >
-                                    <Camera className="w-8 h-8 mb-2" />
-                                    <span className="text-xs font-bold">Adicionar Foto</span>
+                                    <Paperclip className="w-8 h-8 mb-2" />
+                                    <span className="text-xs font-bold text-center px-2">Adicionar Arquivo</span>
                                 </button>
                                 <input
                                     type="file"
                                     ref={fileInputRef}
                                     className="hidden"
-                                    accept="image/*"
+                                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
                                     onChange={handlePhotoUpload}
+                                    multiple
                                 />
                             </div>
                         </div>
@@ -427,7 +473,10 @@ Recomendações:
                                     )}
                                 </div>
                                 <div className="border border-surface-200 rounded-xl overflow-hidden bg-surface-50">
-                                    <CanvasAssinatura onSave={setTechSignature} initialImage={techSignature || undefined} />
+                                    <CanvasAssinatura
+                                        onSave={(data) => handleSignatureSave(data, 'tech')}
+                                        initialImage={techSignature || undefined}
+                                    />
                                 </div>
                                 {techSignature && <p className="text-xs text-brand-600 mt-2 flex items-center font-medium"><CheckCircle className="w-3 h-3 mr-1" /> Assinado</p>}
                             </div>
@@ -435,7 +484,7 @@ Recomendações:
                             <div className="card p-4">
                                 <label className="label mb-2">Cliente</label>
                                 <div className="border border-surface-200 rounded-xl overflow-hidden bg-surface-50">
-                                    <CanvasAssinatura onSave={setClientSignature} />
+                                    <CanvasAssinatura onSave={(data) => handleSignatureSave(data, 'client')} />
                                 </div>
                                 {clientSignature && <p className="text-xs text-brand-600 mt-2 flex items-center font-medium"><CheckCircle className="w-3 h-3 mr-1" /> Assinado</p>}
                             </div>

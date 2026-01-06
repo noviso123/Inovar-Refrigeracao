@@ -1,288 +1,143 @@
 // ============================================================================
-// TIPOS GERAIS DO SISTEMA (100% PT-BR - SCHEMA DEFINITIVO)
+// TIPOS GERAIS DO SISTEMA (CONSOLIDADO - MONOLITO 2026)
 // ============================================================================
 
-export type CargoUsuario = 'super_admin' | 'prestador' | 'tecnico' | 'admin' | 'gerente';
-export type StatusEmpresa = 'ativo' | 'inativo' | 'pendente' | 'bloqueado';
-export type StatusOS = 'pendente' | 'agendado' | 'em_andamento' | 'concluido' | 'cancelado' | 'aprovado' | 'faturado' | 'orcamento';
+export type CargoUsuario = 'admin' | 'prestador';
+export type StatusOS = 'pendente' | 'agendado' | 'em_andamento' | 'concluido' | 'cancelado' | 'aprovado' | 'faturado';
 export type PrioridadeOS = 'baixa' | 'media' | 'alta' | 'critica';
-export type TipoServicoOS = 'preventiva' | 'corretiva' | 'instalacao' | 'inspecao' | 'orcamento';
 
-// Subscription types removed
+export interface Local {
+  id: number;
+  client_id: number;
+  nickname: string;
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  street_number: string;
+  complement?: string;
+  neighborhood: string;
+}
 
+// Para compatibilidade com formatadores legados que esperam um objeto de endereço
 export interface Endereco {
-  id?: number;
-  cep?: string;
-  logradouro?: string;
-  numero?: string;
+  logradouro: string;
+  numero: string;
   complemento?: string;
-  bairro?: string;
-  cidade?: string;
-  estado?: string;
-  principal?: boolean;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  cep: string;
 }
 
 export interface Usuario {
-  id: number | string; // Firebase uses string IDs
-  // empresa_id removed
-  // empresaId removed
-  // empresas removed
+  id: number;
   email: string;
   nome_completo: string;
-  nomeCompleto?: string; // Firebase camelCase alias
-  cpf?: string;
   cargo: CargoUsuario;
   telefone?: string;
-  avatar_base64?: string;
+  cpf?: string;
   avatar_url?: string;
-  avatarUrl?: string; // Firebase camelCase alias
-  assinatura_base64?: string;
-  preferencias?: any;
-  google_email?: string;
-  ativo: boolean;
-  ultimo_login?: string;
-  ultimoLogin?: any; // Firebase camelCase alias (Firestore Timestamp)
-  endereco?: Endereco; // Backend returns this sometimes
-  enderecos?: Endereco[];
-  equipamentos?: Equipamento[];
-  criado_em: string;
-  criadoEm?: any; // Firebase camelCase alias (Firestore Timestamp)
-  atualizado_em: string;
-  atualizadoEm?: any; // Firebase camelCase alias (Firestore Timestamp)
-  // Campos de aprovação (Prestador)
-  aprovado?: boolean;
-  dataAprovacao?: string;
-  // Campos de assinatura (Prestador)
-  assinaturaAtiva?: boolean;
-  assinaturaId?: string;
-  planoId?: string;
-}
-
-
-
-export interface Empresa {
-  id: number | string;
-  nome_razao_social: string;
-  nomeRazaoSocial?: string; // Firebase camelCase alias
-  nome_fantasia: string;
-  nomeFantasia?: string; // Firebase camelCase alias
-  cnpj: string;
-  email_contato?: string;
-  emailContato?: string; // Firebase camelCase alias
-  telefone_contato?: string;
-  telefoneContato?: string; // Firebase camelCase alias
-  endereco_completo?: string;
-  enderecoCompleto?: string; // Firebase camelCase alias
-  logo_base64?: string;
-  logoUrl?: string; // Firebase camelCase alias
-  status: StatusEmpresa;
-  plano?: string;
-  criado_em: string;
-  criadoEm?: any; // Firebase camelCase alias (Timestamp)
-  atualizado_em: string;
-  atualizadoEm?: any; // Firebase camelCase alias (Timestamp)
+  signature_url?: string;
+  is_active: boolean;
+  created_at: string;
 }
 
 export interface Cliente {
-  id: number | string;
-  sequential_id?: number;
-  empresa_id: number | string;
+  id: number;
+  sequential_id: number;
   nome: string;
-  nome_fantasia?: string;
-  cnpj?: string;
-  cpf?: string;
   email?: string;
   telefone?: string;
-  endereco?: string;
-  cidade?: string;
-  estado?: string;
-  cep?: string;
-  numero?: string;
-  complemento?: string;
-  bairro?: string;
-  geo_localizacao?: string;
-  logo_base64?: string;
-  observacoes?: string;
-  // Campo para controle de manutenção preventiva (em meses)
-  periodoManutencaoMeses?: number;
-  ultimaManutencao?: string; // Data da última manutenção concluída
-  proximaManutencao?: string; // Data calculada da próxima manutenção
-  ativo: boolean;
-  criado_em: string;
-  atualizado_em: string;
+  documento?: string; // CPF ou CNPJ formatado
+  cpf?: string;
+  cnpj?: string;
+  locations: Local[];
+  created_at: string;
 }
 
 export interface Equipamento {
-  id: number | string; // Firebase uses string IDs
-  empresa_id?: number | string;
-  cliente_id?: number | string;
-  id_usuario?: number | string; // For user-owned equipment
-  clientes?: Cliente;
+  id: number;
+  location_id: number;
   nome: string;
-  id_marca?: number;
-  id_tipo?: number;
   marca?: string;
   modelo?: string;
   numero_serie?: string;
-  tag_patrimonio?: string;
-  capacidade_btu?: string;
-  voltagem?: string;
-  tipo_gas?: string;
-  tipo_equipamento?: string;
+  tipo_equipamento: string;
   data_instalacao?: string;
-  fim_garantia?: string;
-  local_instalacao?: string;
-  qr_code_dados?: string;
-  qr_code_imagem_base64?: string;
-  foto_principal_base64?: string;
-  manual_pdf_base64?: string;
-  status?: string;
-  criado_em?: string;
-  atualizado_em?: string;
+  created_at: string;
 }
 
 export interface SolicitacaoServico {
-  id: number | string; // Firebase uses string IDs
-  sequential_id?: number; // ID numérico sequencial por empresa
-  numero?: number; // ID numérico sequencial para exibição (1, 2, 3...)
-  empresa_id?: number | string;
-  empresaId?: string; // Firebase camelCase alias
-  cliente_id?: number | string;
-  clienteId?: string; // Firebase camelCase alias
-  clientes?: Cliente;
-  tecnico_id?: number | string;
-  tecnicoId?: string; // Firebase camelCase alias
-  tecnicos?: Usuario;
-  tecnicoNome?: string; // Nome para exibição direta
-  criado_por?: number | string;
-  criadoPorId?: string; // Firebase camelCase alias
-  criadoPorNome?: string; // Nome do criador para exibição direta
-
-  codigo_os?: string;
-  codigoOs?: string; // Firebase camelCase alias
-  titulo: string;
-  descricao_detalhada?: string;
-  descricaoDetalhada?: string; // Firebase camelCase alias
-  relatorio_tecnico?: string; // Relatório de conclusão/solução
-  relatorioTecnico?: string; // Firebase camelCase alias
-  status: StatusOS;
-  prioridade: PrioridadeOS;
-  tipo_servico?: TipoServicoOS;
-  tipoServico?: TipoServicoOS; // Firebase camelCase alias
-
-  data_agendamento_inicio?: string | any; // Can be Firestore Timestamp
-  dataAgendamentoInicio?: any; // Firebase camelCase alias
-  data_agendamento_fim?: string | any;
-  dataAgendamentoFim?: any;
-  data_inicio_real?: string | any;
-  dataInicioReal?: any;
-  data_conclusao_real?: string | any;
-  dataConclusaoReal?: any;
-  google_calendar_event_id?: string;
-
-  valor_pecas?: number;
-  valor_mao_obra?: number;
-  valor_desconto?: number;
-  valor_total?: number;
-  valorTotal?: number; // Firebase camelCase alias
-
-  relatorio_tecnico_pdf_base64?: string;
-
-  itens_os?: ItemOS[];
-  itensOs?: ItemOS[]; // Firebase camelCase alias
-  fotos_os?: FotoOS[];
-  fotosOs?: FotoOS[]; // Firebase camelCase alias
-  aprovacoes_os?: AprovacaoOS[];
-
-  // Campos de UI/Fluxo (Podem ser JSON ou campos virtuais)
-  itens_orcamento?: ItemOrcamento[];
-  descricao_orcamento?: string;
-  orcamento_disponivel?: boolean;
-  data_criacao_orcamento?: string;
-
-  assinatura_cliente?: string;
-  assinatura_tecnico?: string;
-  relatorio_disponivel?: boolean;
-  historico_json?: any[]; // Para timeline
-
-  criado_em?: string;
-  criadoEm?: any; // Firebase Timestamp
-  atualizado_em?: string;
-  atualizadoEm?: any; // Firebase Timestamp
-  nfse?: NFSe;
-}
-
-
-export interface NFSe {
-  id?: string;
-  numero: string;
-  codigo_verificacao: string;
-  data_emissao: string;
-  status?: string;
-  url_pdf?: string;
-  url_xml?: string;
-}
-
-export interface ItemOrcamento {
   id: number;
-  descricao: string;
-  quantidade: number;
-  valor_unitario: number;
-  total: number;
+  sequential_id: number;
+  titulo: string;
+  description?: string;
+  descricao_detalhada?: string;
+  technical_report?: string;
+  status: StatusOS;
+  priority: PrioridadeOS;
+  service_type: string;
+
+  cliente_id: number;
+  location_id?: number;
+  equipment_id?: number;
+  user_id: number;
+
+  created_at: string;
+  scheduled_at?: string;
+  completed_at?: string;
+
+  valor_total: number;
+
+  // Nested data
+  cliente?: {
+    id: number;
+    nome: string;
+    telefone?: string;
+    email?: string;
+  };
+  local?: Local | null;
+  equipamento?: Equipamento | null;
+  itens?: ItemOS[];
+  fotos?: FotoOS[];
+  historico?: HistoricoOS[];
+
+  // Relatórios e Assinaturas
+  client_signature?: string;
+  tech_signature?: string;
+
+  // Metadata
+  orcamento_disponivel?: boolean;
+  relatorio_disponivel?: boolean;
+  nfse?: any;
 }
 
 export interface ItemOS {
   id: number;
-  solicitacao_id: number;
-  equipamento_id?: number | string;
-  equipamentos?: Equipamento;
-  descricao_tarefa: string;
-  quantidade?: number;
-  valor_unitario?: number;
-  valor_total?: number;
-  status_item: string;
-  observacao_tecnica?: string;
-  criado_em: string;
+  descricao: string;
+  quantidade: number;
+  valor_unitario: number;
+  valor_total: number;
+  status: string;
+  equipamento_id?: number;
+  equipamento?: Equipamento;
 }
 
 export interface FotoOS {
   id: number;
-  solicitacao_id: number;
-  item_id?: number;
-  imagem_base64: string;
-  descricao?: string;
-  tipo_foto: string;
-  data_captura: string;
-  criado_em: string;
+  url: string;
+  description?: string;
 }
 
-export interface AprovacaoOS {
+export interface HistoricoOS {
   id: number;
-  solicitacao_id: number;
-  nome_responsavel: string;
-  documento_responsavel?: string;
-  cargo_responsavel?: string;
-  assinatura_base64: string;
-  status_aprovacao: string;
-  comentarios_cliente?: string;
-  data_assinatura: string;
-  criado_em: string;
+  data: string;
+  descricao: string;
+  usuario?: string;
 }
 
-// Aliases para compatibilidade temporária (se necessário)
-export type User = Usuario;
-export type ServiceRequest = SolicitacaoServico;
-export type UserRole = CargoUsuario; // Alias para compatibilidade
 export const UserRole = {
-  SUPER_ADMIN: 'super_admin' as CargoUsuario,
+  ADMIN: 'admin' as CargoUsuario,
   PRESTADOR: 'prestador' as CargoUsuario
 };
-export interface ServiceHistoryItem {
-  date: string;
-  status: string;
-  action: string;
-  authorName: string;
-  note?: string;
-}
-
-export type ServiceStatus = StatusOS;

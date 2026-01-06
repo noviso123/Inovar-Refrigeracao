@@ -12,56 +12,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({ user }) => {
     const location = useLocation();
 
     const getNavItems = () => {
-        const isSuperAdmin = user.cargo === 'super_admin';
-        const prefix = isSuperAdmin ? '/admin' : '/empresario';
+        const isAdmin = user.cargo === 'admin';
 
-        if (isSuperAdmin) {
+        if (isAdmin) {
             return [
-                {
-                    id: '/',
-                    label: 'Início',
-                    icon: Home,
-                },
-                {
-                    id: '/admin/empresas',
-                    label: 'Empresas',
-                    icon: Building,
-                },
-                {
-                    id: '/admin/usuarios',
-                    label: 'Usuários',
-                    icon: UserIcon,
-                },
-                {
-                    id: '/admin/configuracoes',
-                    label: 'Config',
-                    icon: Settings,
-                },
+                { id: '/', label: 'Início', icon: Home },
+                { id: '/clientes', label: 'Clientes', icon: Building },
+                { id: '/usuarios', label: 'Usuários', icon: UserIcon },
+                { id: '/configuracoes', label: 'Config', icon: Settings },
             ];
         }
 
         return [
-            {
-                id: '/',
-                label: 'Início',
-                icon: Home,
-            },
-            {
-                id: `${prefix}/solicitacoes`,
-                label: 'Serviços',
-                icon: Briefcase,
-            },
-            {
-                id: '/nova-solicitacao',
-                label: 'Novo',
-                icon: PlusCircle,
-                isAction: true,
-            },
-            {
-                id: `${prefix}/configuracoes`,
-                label: 'Config',
-                icon: Settings,
-            },
+            { id: '/', label: 'Início', icon: Home },
+            { id: '/solicitacoes', label: 'Serviços', icon: Briefcase },
+            { id: '/nova-solicitacao', label: 'Novo', icon: PlusCircle, isAction: true },
+            { id: '/configuracoes', label: 'Config', icon: Settings },
         ];
     };
 

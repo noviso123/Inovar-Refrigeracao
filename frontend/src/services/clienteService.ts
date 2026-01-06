@@ -1,65 +1,52 @@
 import api from './api';
-import { Cliente } from '../types';
-import { dataCache, CACHE_KEYS } from './dataCache';
+import { Cliente, Local } from '../types';
 
 export const clienteService = {
-    async listar(): Promise<Cliente[]> {
-        // Try in-memory cache first
-        const cached = dataCache.get<Cliente[]>(CACHE_KEYS.CLIENTES);
-        if (cached) {
-            // Return cache immediately, refresh in background
-            this.refreshInBackground();
-            return cached;
+  listar: async () => {
+    const res = await api.get<Cliente[]>('/clientes');
+    return res.data;
+  },
+
+  obterPorId: async (id: number) => {
+    const res = await api.get<Cliente>(`/clientes/${id}`);
+    return res.data;
+  },
+
+  criar: async (dados: any) => {
+    // Map UI form to Backend ClientCreate schema
+    const payload = {
+        nome: dados.nome,
+        email: dados.email,
+        cpf: dados.cpf,
+        cnpj: dados.cnpj,
+        telefone: dados.telefone,
+        primary_location: dados.primary_location || {
+            nickname: 'Sede / Principal',
+            address: dados.endereco,
+            city: dados.cidade,
+            state: dados.estado,
+            zip_code: dados.cep,
+            street_number: dados.numero,
+            complement: dados.complemento,
+            neighborhood: dados.bairro
         }
+    };
+    const res = await api.post<Cliente>('/clientes', payload);
+    return res.data;
+  },
 
-        // Try localStorage cache as fallback
-        try {
-            const localCached = localStorage.getItem('cached_clientes');
-            if (localCached) {
-                const data = JSON.parse(localCached);
-                dataCache.set(CACHE_KEYS.CLIENTES, data);
-                this.refreshInBackground();
-                return data;
-            }
-        } catch (e) {
-            // Ignore parse errors
-        }
+  atualizar: async (id: number, dados: any) => {
+    const res = await api.put<Cliente>(`/clientes/${id}`, dados);
+    return res.data;
+  },
 
-        const response = await api.get<Cliente[]>('/clientes');
-        dataCache.set(CACHE_KEYS.CLIENTES, response.data);
-        return response.data;
-    },
+  remover: async (id: number) => {
+    const res = await api.delete(`/clientes/${id}`);
+    return res.data;
+  },
 
-    // Background refresh to keep cache updated
-    async refreshInBackground(): Promise<void> {
-        try {
-            const response = await api.get<Cliente[]>('/clientes');
-            dataCache.set(CACHE_KEYS.CLIENTES, response.data);
-            localStorage.setItem('cached_clientes', JSON.stringify(response.data));
-        } catch (error) {
-            console.error('Background refresh failed:', error);
-        }
-    },
-
-    async obterPorId(id: number | string): Promise<Cliente> {
-        const response = await api.get<Cliente>(`/clientes/${id}`);
-        return response.data;
-    },
-
-    async criar(cliente: Partial<Cliente>): Promise<Cliente> {
-        const response = await api.post<Cliente>('/clientes', cliente);
-        dataCache.invalidate(CACHE_KEYS.CLIENTES);
-        return response.data;
-    },
-
-    async atualizar(id: number | string, cliente: Partial<Cliente>): Promise<Cliente> {
-        const response = await api.put<Cliente>(`/clientes/${id}`, cliente);
-        dataCache.invalidate(CACHE_KEYS.CLIENTES);
-        return response.data;
-    },
-
-    async remover(id: number | string): Promise<void> {
-        await api.delete(`/clientes/${id}`);
-        dataCache.invalidate(CACHE_KEYS.CLIENTES);
-    }
+  adicionarLocal: async (clienteId: number, local: Partial<Local>) => {
+    const res = await api.post<Local>(`/clientes/${clienteId}/locais`, local);
+    return res.data;
+  }
 };

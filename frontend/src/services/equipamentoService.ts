@@ -7,6 +7,11 @@ export const equipamentoService = {
         return response.data;
     },
 
+    async obterPorId(id: number): Promise<Equipamento> {
+        const response = await api.get<Equipamento>(`/equipamentos/${id}`);
+        return response.data;
+    },
+
     async criar(equipamento: Partial<Equipamento>): Promise<Equipamento> {
         const response = await api.post<Equipamento>('/equipamentos', equipamento);
         return response.data;

@@ -7,7 +7,7 @@ Base = declarative_base()
 
 class SystemSettings(Base):
     __tablename__ = "system_settings"
-    
+
     id = Column(Integer, primary_key=True, index=True) # Always 1
     business_name = Column(String, default="Inovar Refrigeração")
     cnpj = Column(String, nullable=True)
@@ -16,7 +16,7 @@ class SystemSettings(Base):
     address = Column(String, nullable=True)
     website = Column(String, nullable=True)
     logo_url = Column(String, nullable=True)
-    
+
     # Configurações Fiscais (Simplificado)
     nfse_active = Column(Boolean, default=False)
     municipal_registration = Column(String, nullable=True)
@@ -25,7 +25,7 @@ class SystemSettings(Base):
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     password_hash = Column(String)
@@ -33,126 +33,148 @@ class User(Base):
     role = Column(String, default="prestador") # admin, prestador
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    
+
     # Profile Data
     phone = Column(String, nullable=True)
     cpf = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
-    signature_base64 = Column(Text, nullable=True)
+    signature_url = Column(Text, nullable=True) # Was signature_base64
     address_json = Column(JSON, nullable=True)
+
+    # Relationships
+    service_orders = relationship("ServiceOrder", back_populates="user")
 
 class Client(Base):
     __tablename__ = "clients"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     document = Column(String) # CPF/CNPJ
-    email = Column(String)
-    phone = Column(String)
-    address = Column(String)
-    
-    # Address Fields
-    city = Column(String, nullable=True)
-    state = Column(String, nullable=True)
-    zip_code = Column(String, nullable=True)
-    street_number = Column(String, nullable=True)
-    complement = Column(String, nullable=True)
-    neighborhood = Column(String, nullable=True)
-    
-    # Maintenance Control
-    maintenance_period = Column(Integer, nullable=True)
-    
+    email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+
     sequential_id = Column(Integer, nullable=True)
-    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    locations = relationship("Location", back_populates="client", cascade="all, delete-orphan")
     service_orders = relationship("ServiceOrder", back_populates="client")
-    equipments = relationship("Equipment", back_populates="client")
+
+class Location(Base):
+    __tablename__ = "locations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+
+    nickname = Column(String) # e.g., "Sede", "Filial Centro"
+    address = Column(String)
+    city = Column(String)
+    state = Column(String)
+    zip_code = Column(String)
+    street_number = Column(String)
+    complement = Column(String, nullable=True)
+    neighborhood = Column(String)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    client = relationship("Client", back_populates="locations")
+    equipments = relationship("Equipment", back_populates="location")
+    service_orders = relationship("ServiceOrder", back_populates="location")
 
 class Equipment(Base):
     __tablename__ = "equipments"
-    
+
     id = Column(Integer, primary_key=True, index=True)
+    location_id = Column(Integer, ForeignKey("locations.id"))
+
     name = Column(String)
     brand = Column(String, nullable=True)
     model = Column(String, nullable=True)
     serial_number = Column(String, nullable=True)
     equipment_type = Column(String, default="ar_condicionado")
     installation_date = Column(DateTime, nullable=True)
-    
-    client_id = Column(Integer, ForeignKey("clients.id"))
-    client = relationship("Client", back_populates="equipments")
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    location = relationship("Location", back_populates="equipments")
+    service_orders = relationship("ServiceOrder", back_populates="equipment")
 
 class ServiceOrder(Base):
     __tablename__ = "service_orders"
-    
+
     id = Column(Integer, primary_key=True, index=True)
+    sequential_id = Column(Integer, nullable=True) # User-facing ID
+
     title = Column(String, nullable=True)
     status = Column(String, default="aberto")
     priority = Column(String, default="media")
     description = Column(Text, nullable=True)
+    service_type = Column(String, default="corretiva") # corretiva, preventiva, instalacao, inspecao
     descricao_detalhada = Column(Text, nullable=True)
     descricao_orcamento = Column(Text, nullable=True)
     relatorio_tecnico = Column(Text, nullable=True)
-    
-    sequential_id = Column(Integer, nullable=True)
-    
+
     # Flags
     orcamento_disponivel = Column(Boolean, default=False)
     relatorio_disponivel = Column(Boolean, default=False)
-    
+
     # Datas
     created_at = Column(DateTime, default=datetime.utcnow)
     scheduled_at = Column(DateTime, nullable=True)
-    data_agendamento_inicio = Column(DateTime, nullable=True)
     data_inicio_real = Column(DateTime, nullable=True)
     data_fim_real = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
-    
+
     # Valores
-    total_value = Column(Float, default=0.0)
     valor_total = Column(Float, default=0.0)
-    
+
+    # Assinaturas
+    assinatura_cliente = Column(Text, nullable=True)
+
+    # Foreign Keys
+    user_id = Column(Integer, ForeignKey("users.id"))
+    client_id = Column(Integer, ForeignKey("clients.id"))
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
+    equipment_id = Column(Integer, ForeignKey("equipments.id"), nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="service_orders")
+    client = relationship("Client", back_populates="service_orders")
+    location = relationship("Location", back_populates="service_orders")
+    equipment = relationship("Equipment", back_populates="service_orders")
+    itens_os = relationship("ItemOS", back_populates="service_order", cascade="all, delete-orphan")
+
+    # JSON
+    fotos_os = Column(JSON, nullable=True)
+    historico_json = Column(JSON, nullable=True)
+    nfse_json = Column(JSON, nullable=True)
+
     # Assinaturas
     assinatura_cliente = Column(Text, nullable=True)
     assinatura_tecnico = Column(Text, nullable=True)
-    
-    # Relacionamentos
-    client_id = Column(Integer, ForeignKey("clients.id"))
-    client = relationship("Client", back_populates="service_orders")
-    
-    technician_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    technician = relationship("User")
-    
-    equipment_id = Column(Integer, ForeignKey("equipments.id"), nullable=True)
-    
-    # JSON
-    metadata_json = Column(JSON, nullable=True)
-    fotos_os = Column(JSON, nullable=True)
-    historico_json = Column(JSON, nullable=True)
-    
-    itens_os = relationship("ItemOS", back_populates="service_order", cascade="all, delete-orphan")
 
 class ItemOS(Base):
     __tablename__ = "service_order_items"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     solicitacao_id = Column(Integer, ForeignKey("service_orders.id"))
-    equipamento_id = Column(Integer, ForeignKey("equipments.id"), nullable=True)
-    
+
     descricao_tarefa = Column(String)
     quantidade = Column(Float, default=1.0)
     valor_unitario = Column(Float, default=0.0)
     valor_total = Column(Float, default=0.0)
     status_item = Column(String, default="pendente")
     observacao_tecnica = Column(Text, nullable=True)
-    
+
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     service_order = relationship("ServiceOrder", back_populates="itens_os")
-    equipment = relationship("Equipment")
 
 class WhatsAppInstance(Base):
     __tablename__ = "whatsapp_instances"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     instance_name = Column(String)
@@ -160,12 +182,12 @@ class WhatsAppInstance(Base):
     status = Column(String, default="disconnected")
     qrcode_base64 = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     user = relationship("User")
 
 class Message(Base):
     __tablename__ = "messages"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     instance_id = Column(Integer, ForeignKey("whatsapp_instances.id"))
     external_id = Column(String, nullable=True)
@@ -175,7 +197,7 @@ class Message(Base):
     direction = Column(String)
     status = Column(String, default="pending")
     timestamp = Column(DateTime, default=datetime.utcnow)
-    
+
     instance = relationship("WhatsAppInstance")
 
 class Notification(Base):

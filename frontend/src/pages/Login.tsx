@@ -8,10 +8,9 @@ import { API_BASE } from '../services/api';
 
 interface LoginProps {
   onLogin: (user: Usuario) => void;
-  onRegisterCompanyClick: () => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLogin, onRegisterCompanyClick }) => {
+export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -42,28 +41,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegisterCompanyClick })
     try {
       const data = await authService.login(email, password);
       const user = data.usuario;
-
-      const company = (user as any).empresa || (user as any).empresas;
-      if (company) {
-        if (company.status === 'pendente') {
-          setError('Seu cadastro de empresa está em análise. Aguarde a aprovação.');
-          setIsLoading(false);
-          return;
-        }
-        if (company.status === 'bloqueado' || company.status === 'inativo') {
-          setError('Sua conta de empresa está suspensa ou bloqueada.');
-          setIsLoading(false);
-          return;
-        }
-      }
-
+      // Single-tenant: No company status checks needed
       onLogin(user);
     } catch (err: any) {
       console.error('Login Error:', err);
       let errorMsg = 'Erro ao conectar ao servidor.';
 
       if (err.response?.data) {
-        // Handle { error: ... } or { code: ..., message: ... } directly
         const data = err.response.data;
         if (data.error) {
           errorMsg = typeof data.error === 'object' ? JSON.stringify(data.error) : String(data.error);
@@ -89,21 +73,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegisterCompanyClick })
     try {
       const data = await authService.googleLogin(response.access_token);
       const user = data.usuario;
-
-      const company = (user as any).empresa || (user as any).empresas;
-      if (company) {
-        if (company.status === 'pendente') {
-          setError('Seu cadastro de empresa está em análise.');
-          setIsLoading(false);
-          return;
-        }
-        if (company.status === 'bloqueado' || company.status === 'inativo') {
-          setError('Sua conta de empresa está suspensa.');
-          setIsLoading(false);
-          return;
-        }
-      }
-
+      // Single-tenant: No company status checks needed
       onLogin(user);
     } catch (err: any) {
       console.error('Google Login Error:', err);

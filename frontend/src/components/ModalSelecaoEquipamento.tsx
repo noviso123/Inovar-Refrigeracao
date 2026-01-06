@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
-import { Equipamento } from '../types';
+import { Cliente, Equipamento, Local } from '../types';
 import { equipamentoService } from '../services/equipamentoService';
+import { clienteService } from '../services/clienteService';
 import apiService from '../services/api';
 import { Search, PlusCircle, X, ThermometerSnowflake, Loader2, Check, Square, CheckSquare } from 'lucide-react';
 import { Button } from './Botao';
@@ -11,7 +12,7 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (equipamento: Equipamento | Equipamento[]) => void;
-    clienteId: number | string;
+    clienteId: number;
     multiple?: boolean;
 }
 
@@ -22,9 +23,10 @@ export const ModalSelecaoEquipamento: React.FC<Props> = ({ isOpen, onClose, onSe
     const [isLoading, setIsLoading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [clientLocations, setClientLocations] = useState<Local[]>([]);
 
     // Multi-selection state
-    const [selectedIds, setSelectedIds] = useState<(number | string)[]>([]);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
     // New Equipment Form State
     const [newEqData, setNewEqData] = useState({
@@ -32,25 +34,37 @@ export const ModalSelecaoEquipamento: React.FC<Props> = ({ isOpen, onClose, onSe
         tipo: 'Split Hi-Wall',
         marca: 'Samsung',
         modelo: '',
-        local: ''
+        location_id: 0
     });
 
     useEffect(() => {
         if (isOpen && clienteId) {
             loadEquipments();
+            loadClientLocations();
             setIsCreating(false);
             setSearchTerm('');
             setSelectedIds([]);
         }
     }, [isOpen, clienteId]);
 
+    const loadClientLocations = async () => {
+        try {
+            const data = await clienteService.obterPorId(Number(clienteId));
+            setClientLocations(data.locations || []);
+            if (data.locations && data.locations.length > 0) {
+                setNewEqData(prev => ({ ...prev, location_id: data.locations[0].id }));
+            }
+        } catch (error) {
+            console.error('Erro ao carregar locais do cliente:', error);
+        }
+    };
+
     useEffect(() => {
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             setFilteredEquipments(equipments.filter(e =>
                 e.nome.toLowerCase().includes(term) ||
-                (e.marca && e.marca.toLowerCase().includes(term)) ||
-                (e.local_instalacao && e.local_instalacao.toLowerCase().includes(term))
+                (e.marca && e.marca.toLowerCase().includes(term))
             ));
         } else {
             setFilteredEquipments(equipments);
@@ -60,8 +74,7 @@ export const ModalSelecaoEquipamento: React.FC<Props> = ({ isOpen, onClose, onSe
     const loadEquipments = async () => {
         setIsLoading(true);
         try {
-            // Manually fetching with query param since service might not expose it easily
-            const response = await apiService.get(`/equipamentos?clienteId=${clienteId}`);
+            const response = await apiService.get(`/equipamentos?clientId=${clienteId}`);
             const data = Array.isArray(response.data) ? response.data : [];
             setEquipments(data);
             setFilteredEquipments(data);
@@ -81,8 +94,7 @@ export const ModalSelecaoEquipamento: React.FC<Props> = ({ isOpen, onClose, onSe
                 tipo_equipamento: newEqData.tipo,
                 marca: newEqData.marca,
                 modelo: newEqData.modelo,
-                local_instalacao: newEqData.local,
-                cliente_id: clienteId,
+                location_id: newEqData.location_id,
                 status: 'ativo'
             });
 
@@ -105,7 +117,7 @@ export const ModalSelecaoEquipamento: React.FC<Props> = ({ isOpen, onClose, onSe
         }
     };
 
-    const toggleSelection = (id: number | string) => {
+    const toggleSelection = (id: number) => {
         if (selectedIds.includes(id)) {
             setSelectedIds(selectedIds.filter(sid => sid !== id));
         } else {
@@ -234,7 +246,19 @@ export const ModalSelecaoEquipamento: React.FC<Props> = ({ isOpen, onClose, onSe
 
                             <div className="grid grid-cols-2 gap-3">
                                 <input type="text" placeholder="Modelo (Opcional)" className="border p-2 rounded" value={newEqData.modelo} onChange={e => setNewEqData({ ...newEqData, modelo: e.target.value })} />
-                                <input type="text" placeholder="Local de Instalação (Opcional)" className="border p-2 rounded" value={newEqData.local} onChange={e => setNewEqData({ ...newEqData, local: e.target.value })} />
+                                <div className="flex flex-col">
+                                    <label className="text-[10px] text-gray-500 mb-0.5 ml-1">Local de Instalação *</label>
+                                    <select
+                                        className="border p-2 rounded bg-white text-sm"
+                                        value={newEqData.location_id}
+                                        onChange={e => setNewEqData({ ...newEqData, location_id: Number(e.target.value) })}
+                                    >
+                                        <option value={0}>Selecione...</option>
+                                        {clientLocations.map(loc => (
+                                            <option key={loc.id} value={loc.id}>{loc.nickname}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     )}

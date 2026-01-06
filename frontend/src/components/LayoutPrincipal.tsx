@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { BottomNav } from './BottomNav';
 import { SecureImage } from './SecureImage';
-import { ModalUpgrade } from './ModalUpgrade';
 
 interface LayoutProps {
   user: Usuario;
@@ -36,48 +35,30 @@ export const LayoutPrincipal: React.FC<LayoutProps> = ({
   onLogout,
   children
 }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Estado para modal de upgrade
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [upgradeMessage, setUpgradeMessage] = useState('');
+  const getMenuItems = () => {
+    const isAdmin = user.cargo === 'admin';
 
-  React.useEffect(() => {
-    const handleLimitReached = (event: CustomEvent) => {
-      setUpgradeMessage(event.detail.message);
-      setUpgradeModalOpen(true);
-    };
+    if (isAdmin) {
+      return [
+        { id: '/', label: 'Painel', icon: Home, section: 'geral' },
+        { id: '/solicitacoes', label: 'Serviços', icon: Briefcase, section: 'gestao' },
+        { id: '/clientes', label: 'Clientes', icon: UserIcon, section: 'gestao' },
+        { id: '/agenda', label: 'Agenda', icon: Calendar, section: 'gestao' },
+        { id: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, section: 'gestao' },
+        { id: '/financeiro', label: 'Financeiro', icon: BarChart2, section: 'gestao' },
+        { id: '/usuarios', label: 'Equipe', icon: UserIcon, section: 'gestao' },
+        { id: '/configuracoes', label: 'Configurações', icon: Settings, section: 'conta' }
+      ];
+    }
 
-    window.addEventListener('plan-limit-reached', handleLimitReached as EventListener);
-    return () => {
-      window.removeEventListener('plan-limit-reached', handleLimitReached as EventListener);
-    };
-  }, []);
-
-  // Menu Simplificado (Admin e Prestador)
-  if (user.cargo === 'admin' || user.cargo === 'super_admin') {
     return [
       { id: '/', label: 'Painel', icon: Home, section: 'geral' },
-      { id: '/empresario/solicitacoes', label: 'Serviços', icon: Briefcase, section: 'gestao' },
-      { id: '/empresario/clientes', label: 'Clientes', icon: UserIcon, section: 'gestao' },
+      { id: '/solicitacoes', label: 'Serviços', icon: Briefcase, section: 'gestao' },
       { id: '/agenda', label: 'Agenda', icon: Calendar, section: 'gestao' },
-      { id: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, section: 'gestao' },
-      { id: '/empresario/financeiro', label: 'Financeiro', icon: BarChart2, section: 'gestao' },
-      { id: '/empresario/tecnicos', label: 'Equipe', icon: UserIcon, section: 'gestao' },
-      { id: '/empresario/configuracoes', label: 'Configurações', icon: Settings, section: 'conta' }
-    ];
-  }
-
-  // Menu Prestador (Técnico)
-  return [
-    { id: '/', label: 'Painel', icon: Home, section: 'geral' },
-    { id: '/minhas-ordens', label: 'Minhas Ordens', icon: Briefcase, section: 'gestao' },
-    { id: '/agenda', label: 'Agenda', icon: Calendar, section: 'gestao' },
-    { id: '/configuracoes', label: 'Configurações', icon: Settings, section: 'conta' }
-  ];
+      { id: '/configuracoes', label: 'Configurações', icon: Settings, section: 'conta' }
     ];
   };
 
@@ -157,8 +138,7 @@ return (
                 <button
                   onClick={() => {
                     setShowNotifications(false);
-                    const prefix = user.cargo === 'super_admin' ? '/admin' : '/empresario';
-                    navigate(`${prefix}/configuracoes`);
+                    navigate(`/configuracoes`);
                   }}
                   className="text-brand-600 text-xs mt-2 hover:underline"
                 >
@@ -181,7 +161,7 @@ return (
 
     {/* ===== MOBILE MENU DRAWER ===== */}
     <div className={`
-                fixed top-0 left-0 w-80 max-w-[85vw] bg-white z-50 
+                fixed top-0 left-0 w-80 max-w-[85vw] bg-white z-50
                 flex flex-col
                 transform transition-transform duration-300 ease-out
                 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -319,13 +299,6 @@ return (
 
     {/* ===== BOTTOM NAVIGATION (Mobile only) ===== */}
     <BottomNav user={user} />
-
-    {/* ===== MODAL UPGRADE ===== */}
-    <ModalUpgrade
-      isOpen={upgradeModalOpen}
-      onClose={() => setUpgradeModalOpen(false)}
-      message={upgradeMessage}
-    />
   </div>
 );
 };

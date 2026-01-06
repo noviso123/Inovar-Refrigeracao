@@ -235,15 +235,10 @@ export const GeradorQrCode: React.FC = () => {
                 notify('Logo processada com fundo removido!', 'success');
             } catch (error) {
                 console.error("Upload error:", error);
-                // Fallback to local FileReader if upload fails
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const localUrl = reader.result as string;
-                    setLogoUrl(localUrl);
-                    setRemoteLogoUrl(''); // No remote URL in fallback
-                };
-                reader.readAsDataURL(file);
-                notify('Logo carregada (sem remoção de fundo)', 'info');
+                notify('Erro ao fazer upload da logo. Tente novamente.', 'error');
+                setLogoUrl('');
+                setRemoteLogoUrl('');
+                e.target.value = ''; // Reset input
             } finally {
                 setIsUploading(false);
             }

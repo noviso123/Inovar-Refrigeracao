@@ -3,13 +3,12 @@ import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-do
 import { Usuario, SolicitacaoServico, CargoUsuario } from './types';
 import { authService } from './services/authService';
 import { solicitacaoService } from './services/solicitacaoService';
-import api from './services/api'; // Ainda usado para chamadas genéricas se necessário
+import api from './services/api';
 import { LayoutPrincipal } from './components/LayoutPrincipal';
 import { Login } from './pages/Login';
-import { Users as GerenciarTecnicos } from './pages/Usuarios';
+import { Users as GerenciarUsuarios } from './pages/Usuarios';
 import { NotificationProvider, useNotification } from './contexts/ContextoNotificacao';
 import { Loader2 } from 'lucide-react';
-
 
 // Lazy Load Pages
 const Painel = lazy(() => import('./pages/Painel').then(module => ({ default: module.Painel })));
@@ -22,22 +21,16 @@ const ServiceRequestDetails = lazy(() => import('./pages/DetalhesSolicitacao').t
 const Schedule = lazy(() => import('./pages/Agenda').then(module => ({ default: module.Schedule })));
 const Clientes = lazy(() => import('./pages/Clientes').then(module => ({ default: module.Clientes })));
 const WhatsApp = lazy(() => import('./pages/WhatsApp').then(module => ({ default: module.WhatsApp })));
-
-
 const AdminInvoices = lazy(() => import('./pages/AdminInvoices').then(module => ({ default: module.AdminInvoices })));
-
-import { SubscriptionGuard } from './components/SubscriptionGuard';
 
 import { ScrollToTop } from './components/ScrollToTop';
 
-// Componente de Carregamento
 const PageLoader = () => (
     <div className="h-full w-full flex items-center justify-center p-10">
         <Loader2 className="w-10 h-10 text-brand-600 animate-spin" />
     </div>
 );
 
-// Wrapper for Details
 const RequestDetailsWrapper = ({ user, onRefresh }: { user: Usuario, onRefresh: () => Promise<any> }) => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -46,17 +39,10 @@ const RequestDetailsWrapper = ({ user, onRefresh }: { user: Usuario, onRefresh: 
 
     useEffect(() => {
         if (id) {
-            // Usar ID diretamente como string (Firebase usa string IDs)
             solicitacaoService.obterPorId(id)
                 .then(data => {
                     setRequest(data);
                     setLoading(false);
-
-                    // Canonical URL Redirect: If we loaded by UID but have a numeric ID, switch URL
-                    if (data.numero && String(data.numero) !== id) {
-                        const newUrl = `/solicitacao/${data.numero}`;
-                        window.history.replaceState(null, '', newUrl);
-                    }
                 })
                 .catch(err => {
                     console.error('Erro ao buscar solicitação:', err);
@@ -68,25 +54,18 @@ const RequestDetailsWrapper = ({ user, onRefresh }: { user: Usuario, onRefresh: 
     const handleUpdateRequest = async (requestId: number | string, updates: Partial<SolicitacaoServico>, note?: string) => {
         try {
             const payload = { ...updates };
-
-            // Append note to history if provided
             if (note && request) {
                 const newHistoryItem = {
                     data: new Date().toISOString(),
                     descricao: note,
-                    usuario: user.nome_completo || user.nomeCompleto || 'Sistema'
+                    usuario: user.nome_completo || 'Sistema'
                 };
-                // Ensure historico_json is an array
-                const currentHistory = Array.isArray(request.historico_json) ? request.historico_json : [];
-                payload.historico_json = [...currentHistory, newHistoryItem];
+                const currentHistory = Array.isArray(request.historico_json) ? (request as any).historico_json : [];
+                (payload as any).historico_json = [...currentHistory, newHistoryItem];
             }
-
             await solicitacaoService.atualizar(requestId, payload);
             const refreshed = await solicitacaoService.obterPorId(requestId);
-            console.log('Refetched Request Data:', refreshed);
             setRequest(refreshed);
-
-            // Sync global state for Finance dashboard
             await onRefresh();
         } catch (error) {
             console.error('Failed to update request:', error);
@@ -94,13 +73,11 @@ const RequestDetailsWrapper = ({ user, onRefresh }: { user: Usuario, onRefresh: 
     };
 
     if (loading) return <PageLoader />;
-    if (!request) return <div className="p-8 text-center text-gray-500">Solicitação não encontrada. <button onClick={() => navigate(-1)} className="text-brand-600 underline">Voltar</button></div>;
+    if (!request) return <div className="p-8 text-center text-gray-500">Solicitação não encontrada.</div>;
 
     return <ServiceRequestDetails request={request} user={user} onBack={() => navigate(-1)} onUpdate={handleUpdateRequest} onDelete={async () => { await onRefresh(); }} />;
 };
 
-
-// Role Guard Component
 const RequireRole = ({ children, allowedRoles, user }: { children: JSX.Element, allowedRoles: CargoUsuario[], user: Usuario }) => {
     if (!allowedRoles.includes(user.cargo)) {
         return <Navigate to="/" replace />;
@@ -114,7 +91,6 @@ const AppContent: React.FC = () => {
     const [requests, setRequests] = useState<SolicitacaoServico[]>([]);
     const navigate = useNavigate();
 
-    // Refresh function for instant data sync
     const refreshRequests = async () => {
         try {
             const data = await solicitacaoService.listar();
@@ -126,10 +102,8 @@ const AppContent: React.FC = () => {
         }
     };
 
-    // Load Data from API - Parallel Loading for better performance
     useEffect(() => {
         if (user) {
-            // Load user and requests in parallel
             Promise.all([
                 api.get<Usuario>(`/usuarios/${user.id}`),
                 solicitacaoService.listar()
@@ -139,7 +113,7 @@ const AppContent: React.FC = () => {
                 setRequests(requestsData);
             }).catch(err => console.error('Error loading data:', err));
         }
-    }, []);
+    }, [user?.id]);
 
     const handleLogin = (loggedInUser: Usuario) => {
         setUser(loggedInUser);
@@ -155,9 +129,7 @@ const AppContent: React.FC = () => {
     const handleUpdateUser = async (userId: number | string, updates: Partial<Usuario>) => {
         try {
             const res = await api.put<Usuario>(`/usuarios/${userId}`, updates);
-            // Use response directly - backend returns updated user
             const updatedUser = res.data;
-            console.log('User updated successfully:', updatedUser);
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
             notify('Perfil atualizado com sucesso!', 'success');
@@ -179,7 +151,7 @@ const AppContent: React.FC = () => {
     if (!user) {
         return (
             <Routes>
-                <Route path="/login" element={<Login onLogin={handleLogin} onRegisterCompanyClick={() => navigate('/register')} />} />
+                <Route path="/login" element={<Login onLogin={handleLogin} />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         );
@@ -190,109 +162,28 @@ const AppContent: React.FC = () => {
             <ScrollToTop />
             <Suspense fallback={<PageLoader />}>
                 <Routes>
-                    <Route path="/" element={
-                        <SubscriptionGuard user={user}>
-                            <Painel user={user} />
-                        </SubscriptionGuard>
-                    } />
+                    {/* Home / Painel */}
+                    <Route path="/" element={<Painel user={user} />} />
 
-                    <Route path="/empresario/*" element={
-                        <SubscriptionGuard user={user}>
-                            <RequireRole allowedRoles={['prestador', 'super_admin']} user={user}>
-                                <Routes>
-                                    <Route path="solicitacoes" element={<ServiceManagement user={user} requests={requests} onViewDetails={(id) => navigate(`/solicitacao/${id}`)} onCreateNew={() => navigate('/nova-solicitacao')} onRefresh={refreshRequests} />} />
-                                    <Route path="clientes" element={<Clientes user={user} />} />
-                                    <Route path="financeiro" element={<Finance requests={requests} />} />
-                                    <Route path="qrcode" element={<QrCodeGenerator />} />
+                    {/* Rotas de Gestão (Simplificadas) */}
+                    <Route path="/solicitacoes" element={<ServiceManagement user={user} requests={requests} onViewDetails={(id) => navigate(`/solicitacao/${id}`)} onCreateNew={() => navigate('/nova-solicitacao')} onRefresh={refreshRequests} />} />
+                    <Route path="/clientes" element={<Clientes user={user} />} />
+                    <Route path="/financeiro" element={<Finance requests={requests} />} />
+                    <Route path="/usuarios" element={<GerenciarUsuarios />} />
+                    <Route path="/configuracoes" element={<Settings user={user} onUpdateUser={handleUpdateUser} />} />
+                    <Route path="/whatsapp" element={<WhatsApp />} />
+                    <Route path="/qrcode" element={<QrCodeGenerator />} />
+                    <Route path="/agenda" element={<Schedule user={user} requests={requests} onViewDetails={(id) => navigate(`/solicitacao/${id}`)} onUpdate={handleUpdateRequest} />} />
 
-                                    <Route path="configuracoes" element={<Settings user={user} onUpdateUser={handleUpdateUser} />} />
-                                    <Route path="tecnicos" element={<GerenciarTecnicos technicianMode={true} />} />
-                                </Routes>
-                            </RequireRole>
-                        </SubscriptionGuard>
-                    } />
+                    {/* Detalhes e Novos */}
+                    <Route path="/solicitacao/:id" element={<RequestDetailsWrapper user={user} onRefresh={refreshRequests} />} />
+                    <Route path="/nova-solicitacao" element={<ServiceRequestForm user={user} />} />
 
-                    {/* Super Admin Routes - Only administrative screens */}
-                    <Route path="/admin/*" element={
-                        <RequireRole allowedRoles={['super_admin', 'admin']} user={user}>
-                            <Routes>
-                                <Route path="financeiro" element={<Finance requests={requests} />} />
-                                <Route path="notas-fiscais" element={<AdminInvoices />} />
-                                <Route path="qrcode" element={<QrCodeGenerator />} />
-                                <Route path="configuracoes" element={<Settings user={user} onUpdateUser={handleUpdateUser} />} />
-                                <Route path="usuarios" element={<GerenciarTecnicos />} />
-                            </Routes>
-                        </RequireRole>
-                    } />
-
-                    {/* Rotas de Prestador e Técnico */}
-                    <Route path="/minhas-ordens" element={
-                        <SubscriptionGuard user={user}>
-                            <RequireRole allowedRoles={['prestador', 'tecnico', 'super_admin']} user={user}>
-                                <ServiceManagement
-                                    user={user}
-                                    requests={requests.filter(r => r.tecnico_id === user.id || r.tecnicoId === user.id)}
-                                    onViewDetails={(id) => navigate(`/solicitacao/${id}`)}
-                                    onCreateNew={() => { }}
-                                />
-                            </RequireRole>
-                        </SubscriptionGuard>
-                    } />
-
-                    {/* Minha Assinatura - Acessível mesmo sem assinatura ativa */}
-                    <Route path="/minha-assinatura" element={
-                        <RequireRole allowedRoles={['prestador', 'tecnico', 'super_admin']} user={user}>
-                            <MinhaAssinatura user={user} />
-                        </RequireRole>
-                    } />
-                    {/* Redirect old /assinatura to /minha-assinatura */}
-                    <Route path="/assinatura" element={<Navigate to="/minha-assinatura" replace />} />
-
-                    {/* Agenda - Prestador e Técnico */}
-                    <Route path="/agenda" element={
-                        <SubscriptionGuard user={user}>
-                            <RequireRole allowedRoles={['prestador', 'tecnico', 'super_admin']} user={user}>
-                                <Schedule
-                                    user={user}
-                                    requests={requests}
-                                    onViewDetails={(id) => navigate(`/solicitacao/${id}`)}
-                                    onUpdate={handleUpdateRequest}
-                                />
-                            </RequireRole>
-                        </SubscriptionGuard>
-                    } />
-
-                    {/* WhatsApp - Apenas Prestador */}
-                    <Route path="/whatsapp" element={
-                        <SubscriptionGuard user={user}>
-                            <RequireRole allowedRoles={['prestador', 'super_admin']} user={user}>
-                                <WhatsApp />
-                            </RequireRole>
-                        </SubscriptionGuard>
-                    } />
-
-                    {/* Configurações Gerais - Apenas Técnico (outros usam rotas prefixadas) */}
-                    <Route path="/configuracoes" element={
-                        <RequireRole allowedRoles={['tecnico']} user={user}>
-                            <Settings user={user} onUpdateUser={handleUpdateUser} />
-                        </RequireRole>
-                    } />
-
-
-
-                    {/* Detalhes da Solicitação */}
-                    <Route path="/solicitacao/:id" element={
-                        <SubscriptionGuard user={user}>
-                            <RequestDetailsWrapper user={user} onRefresh={refreshRequests} />
-                        </SubscriptionGuard>
-                    } />
-
-                    {/* Nova Solicitação */}
-                    <Route path="/nova-solicitacao" element={
-                        <SubscriptionGuard user={user}>
-                            <ServiceRequestForm user={user} />
-                        </SubscriptionGuard>
-                    } />
+                    {/* Redirecionamentos de rotas legadas */}
+                    <Route path="/empresario/*" element={<Navigate to="/" replace />} />
+                    <Route path="/admin" element={<Navigate to="/" replace />} />
+                    <Route path="/minhas-ordens" element={<Navigate to="/solicitacoes" replace />} />
+                    <Route path="/minha-assinatura" element={<Navigate to="/configuracoes" replace />} />
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes >

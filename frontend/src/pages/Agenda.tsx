@@ -91,7 +91,7 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
 
     const scheduledRequests = safeRequests
         .filter(req => {
-            const date = safeParseDate(req.data_agendamento_inicio);
+            const date = safeParseDate(req.scheduled_at);
             if (!date) return false;
 
             // Filter out completed/finalized statuses
@@ -106,8 +106,8 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
             return true;
         })
         .sort((a, b) => {
-            const dateA = safeParseDate(a.data_agendamento_inicio);
-            const dateB = safeParseDate(b.data_agendamento_inicio);
+            const dateA = safeParseDate(a.scheduled_at);
+            const dateB = safeParseDate(b.scheduled_at);
             if (!dateA || !dateB) return 0;
             return dateA.getTime() - dateB.getTime();
         });
@@ -115,14 +115,15 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
     const mySchedule = scheduledRequests;
 
     const syncToGoogle = async (manual = false) => {
+        // @ts-ignore
         if (!user.google_email) {
             if (manual) notify('Sua conta não está vinculada ao Google. Clique no botão "Vincular" abaixo.', 'warning');
             return;
         }
 
         const requestsToSync = manual
-            ? mySchedule.filter(req => req.data_agendamento_inicio)
-            : mySchedule.filter(req => !req.google_calendar_event_id && req.data_agendamento_inicio);
+            ? mySchedule.filter(req => req.scheduled_at)
+            : mySchedule.filter(req => !req.google_calendar_event_id && req.scheduled_at);
 
         if (requestsToSync.length === 0) {
             if (manual) notify('Nenhum agendamento encontrado para sincronizar.', 'info');
@@ -135,15 +136,15 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
         const eventsToSync = requestsToSync.map(req => ({
             requestId: req.id, // Explicitly pass requestId for backend search
             googleEventId: req.google_calendar_event_id,
-            summary: `Visita Técnica #${req.numero || req.codigo_os || req.id} - ${req.titulo}`,
-            description: `Cliente: ${req.clientes?.nome}\nServiço: ${req.descricao_detalhada}\nEndereço: ${req.clientes?.endereco || 'N/A'}\nContato: ${user.telefone || 'N/A'}`,
-            start: { dateTime: new Date(req.data_agendamento_inicio!).toISOString() },
-            end: { dateTime: new Date(new Date(req.data_agendamento_inicio!).getTime() + 3600000).toISOString() },
-            location: req.clientes?.endereco || 'Endereço não informado',
+            summary: `Visita Técnica #${req.sequential_id || req.id} - ${req.titulo}`,
+            description: `Cliente: ${req.cliente?.nome}\nServiço: ${req.descricao_detalhada || req.description}\nEndereço: ${req.local ? formatAddress(req.local) : 'N/A'}\nContato: ${user.telefone || 'N/A'}`,
+            start: { dateTime: new Date(req.scheduled_at!).toISOString() },
+            end: { dateTime: new Date(new Date(req.scheduled_at!).getTime() + 3600000).toISOString() },
+            location: req.local ? formatAddress(req.local) : 'Endereço não informado',
             extendedProperties: {
                 private: {
                     requestId: req.id,
-                    ticketId: req.numero || req.codigo_os || req.id
+                    ticketId: req.sequential_id || req.id
                 }
             }
         }));
@@ -193,6 +194,7 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
     };
 
     React.useEffect(() => {
+        // @ts-ignore
         if (user.google_email) {
             syncToGoogle(false);
         }
@@ -201,9 +203,9 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
     const groupRequestsByDate = () => {
         const groups: Record<string, SolicitacaoServico[]> = {};
         mySchedule.forEach(req => {
-            const date = safeParseDate(req.data_agendamento_inicio);
+            const date = safeParseDate(req.scheduled_at);
             if (!date) return;
-            const dateStr = formatDateString(req.data_agendamento_inicio);
+            const dateStr = formatDateString(req.scheduled_at);
             if (!groups[dateStr]) groups[dateStr] = [];
             groups[dateStr].push(req);
         });
@@ -414,17 +416,17 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
                                             {scheduleGroups[date].map(req => {
                                                 const isSynced = !!req.google_calendar_event_id;
                                                 const googleUrl = generateGoogleCalendarLink(
-                                                    `Visita Técnica #${req.numero || req.codigo_os || req.id} - ${req.titulo}`,
-                                                    `Cliente: ${req.clientes?.nome}\nServiço: ${req.descricao_detalhada}\nContato: ${user.telefone || 'N/A'}`,
-                                                    req.data_agendamento_inicio!,
-                                                    req.clientes?.endereco || ''
+                                                    `Visita Técnica #${req.sequential_id || req.id} - ${req.titulo}`,
+                                                    `Cliente: ${req.cliente?.nome}\nServiço: ${req.descricao_detalhada || req.description}\nContato: ${user.telefone || 'N/A'}`,
+                                                    req.scheduled_at!,
+                                                    req.local || 'Endereço não informado'
                                                 );
 
                                                 return (
                                                     <div
                                                         key={req.id}
                                                         className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden active:bg-gray-50 transition"
-                                                        onClick={() => onViewDetails(req.numero || req.id)}
+                                                        onClick={() => onViewDetails(req.sequential_id || req.id)}
                                                     >
                                                         {/* Card Header */}
                                                         <div className="flex items-stretch">
@@ -432,10 +434,10 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
                                                             <div className="w-20 md:w-24 bg-gradient-to-b from-brand-500 to-brand-600 flex flex-col items-center justify-center py-4 text-white">
                                                                 <Clock className="w-4 h-4 mb-1 opacity-80" />
                                                                 <span className="text-lg md:text-xl font-bold">
-                                                                    {formatTime(req.data_agendamento_inicio)}
+                                                                    {formatTime(req.scheduled_at)}
                                                                 </span>
                                                                 {isSynced && (
-                                                                    <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded mt-1 flex items-center">
+                                                                    <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded mt-1 flex items-center" title="Sincronizado com Google Agenda">
                                                                         <CalendarCheck className="w-2.5 h-2.5 mr-0.5" />
                                                                         Google
                                                                     </span>
@@ -449,7 +451,7 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
                                                                     <div className="min-w-0 flex-1">
                                                                         <div className="flex items-center gap-2 mb-1">
                                                                             <span className="text-[10px] md:text-xs font-medium text-gray-400">
-                                                                                #{req.numero || req.codigo_os || String(req.id).slice(-6)}
+                                                                                #{req.sequential_id || String(req.id).slice(-6)}
                                                                             </span>
                                                                             <StatusBadge status={req.status} />
                                                                         </div>
@@ -464,11 +466,11 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
                                                                 <div className="space-y-1.5">
                                                                     <div className="flex items-center text-xs md:text-sm text-gray-600">
                                                                         <UserIcon className="w-3.5 h-3.5 mr-2 text-gray-400 flex-shrink-0" />
-                                                                        <span className="truncate">{req.clientes?.nome || 'Cliente'}</span>
+                                                                        <span className="truncate">{req.cliente?.nome || 'Cliente'}</span>
                                                                     </div>
                                                                     <div className="flex items-start text-xs md:text-sm text-gray-600">
                                                                         <MapPin className="w-3.5 h-3.5 mr-2 text-gray-400 flex-shrink-0 mt-0.5" />
-                                                                        <span className="line-clamp-2">{formatAddress(req.clientes?.endereco)}</span>
+                                                                        <span className="line-clamp-2">{formatAddress(req.local)}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -487,9 +489,9 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
                                                                 <span className="hidden xs:inline">Google Calendar</span>
                                                                 <span className="xs:hidden">Agenda</span>
                                                             </a>
-                                                            {req.clientes?.telefone && (
+                                                            {req.cliente?.telefone && (
                                                                 <a
-                                                                    href={`tel:${req.clientes.telefone.replace(/\D/g, '')}`}
+                                                                    href={`tel:${req.cliente.telefone.replace(/\D/g, '')}`}
                                                                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-green-600 hover:bg-green-50 active:bg-green-100 transition"
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
@@ -501,7 +503,7 @@ export const Schedule: React.FC<Props> = ({ user, requests: initialRequests, onV
                                                                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    onViewDetails(req.numero || req.id);
+                                                                    onViewDetails(req.sequential_id || req.id);
                                                                 }}
                                                             >
                                                                 <Wrench className="w-3.5 h-3.5" />

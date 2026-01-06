@@ -68,11 +68,11 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
-    
+
     return user
 
 # Rotas
@@ -85,10 +85,10 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role, "id": user.id}, 
+        data={"sub": user.email, "role": user.role, "id": user.id},
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
@@ -101,26 +101,31 @@ async def login_json(login_data: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
-    
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role, "id": user.id}, 
+        data={"sub": user.email, "role": user.role, "id": user.id},
         expires_delta=access_token_expires
     )
-    
+
+    # Placeholder for empresa_data, assuming it would be fetched or defined elsewhere
+    empresa_data = [] # Or fetch from user.empresas if it's a relationship
+
     return {
         "token": access_token,
-        "user": {
+        "usuario": {
             "id": user.id,
             "email": user.email,
             "nome_completo": user.full_name,
             "cargo": user.role,
-            "assinaturaAtiva": True,
+            "role": user.role,
             "telefone": user.phone,
             "cpf": user.cpf,
+            "is_active": user.is_active,
             "avatar_url": user.avatar_url,
-            "assinatura_base64": user.signature_base64,
-            "enderecos": [user.address_json] if user.address_json else []
+            "signature_url": user.signature_url,
+            "assinatura_url": user.signature_url, # Helper alias
+            "empresas": empresa_data
         }
     }
 
@@ -129,7 +134,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     hashed_password = get_password_hash(user.password)
     new_user = User(
         email=user.email,
@@ -140,7 +145,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
+
     access_token = create_access_token(data={"sub": new_user.email, "role": new_user.role, "id": new_user.id})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -149,14 +154,13 @@ async def read_users_me(current_user: User = Depends(get_current_user), db: Sess
     return {
         "id": current_user.id,
         "email": current_user.email,
-        "nome_completo": current_user.full_name,
-        "cargo": current_user.role,
-        "assinaturaAtiva": True,
-        "telefone": current_user.phone,
+        "full_name": current_user.full_name,
+        "role": current_user.role,
+        "phone": current_user.phone,
         "cpf": current_user.cpf,
         "avatar_url": current_user.avatar_url,
-        "assinatura_base64": current_user.signature_base64,
-        "enderecos": [current_user.address_json] if current_user.address_json else []
+        "signature_url": current_user.signature_url,
+        "address": current_user.address_json
     }
 
 # Aliases for frontend compatibility
@@ -166,13 +170,18 @@ async def auth_me(current_user: User = Depends(get_current_user), db: Session = 
 
 @router.post("/auth/google")
 async def google_login(token: dict):
-    # Mock Google Login for now
-    return {"token": "mock_google_token", "usuario": {"id": 1, "email": "google@test.com", "nome_completo": "Google User", "cargo": "user", "assinaturaAtiva": True}}
+    # Mock Google Login for now - aligned with monolithic role structure
+    return {
+        "token": "mock_google_token",
+        "usuario": {
+            "id": 1,
+            "email": "google@test.com",
+            "nome_completo": "Google User",
+            "cargo": "prestador"
+        }
+    }
 
 @router.post("/auth/google/link")
 async def google_link(token: dict):
     """Link Google account to existing user"""
     return {"message": "Conta Google vinculada com sucesso"}
-
-
-

@@ -1,12 +1,7 @@
-/**
- * Painel - Dashboard Router
- * Renderiza o dashboard apropriado baseado no cargo do usuário
- */
 import React from 'react';
 import { Usuario } from '../types';
 import { DashboardSuperAdmin } from './dashboards/DashboardSuperAdmin';
 import { DashboardPrestador } from './dashboards/DashboardPrestador';
-import { DashboardTecnico } from './dashboards/DashboardTecnico';
 
 interface DashboardProps {
     user: Usuario;
@@ -18,14 +13,9 @@ export const Painel: React.FC<DashboardProps> = ({ user }) => {
         window.scrollTo({ top: 0, behavior: 'instant' });
     }, []);
 
-    // Super Admin tem seu próprio dashboard
-    if (user.cargo === 'super_admin') {
+    // Admin tem seu próprio dashboard
+    if (user.cargo === 'admin') {
         return <DashboardSuperAdmin user={user} />;
-    }
-
-    // Técnico tem dashboard específico
-    if (user.cargo === 'tecnico') {
-        return <DashboardTecnico user={user} />;
     }
 
     // Prestador usa o dashboard operacional completo
@@ -33,4 +23,3 @@ export const Painel: React.FC<DashboardProps> = ({ user }) => {
 };
 
 export default Painel;
-

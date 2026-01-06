@@ -17,9 +17,6 @@ import api from '../services/api';
 import { maskCNPJ, maskPhone, maskCEP, maskCPF } from '../utils/formatadores';
 import { fetchAddressByCEP } from '../services/servicoCep';
 import { whatsappService, WhatsAppInstance } from '../services/whatsappService';
-import { PaymentSettings } from './Pagamento';
-
-import { SubscriptionSettings } from './MinhaAssinatura';
 import { AutomacaoSettings } from './AutomacaoSettings';
 import { ModalConfiguracaoNFSe } from '../components/ModalConfiguracaoNFSe';
 
@@ -39,7 +36,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
     const [phone, setPhone] = useState(user.telefone || '');
     const [cpf, setCpf] = useState(user.cpf || '');
     const [avatar, setAvatar] = useState(user.avatar_url || '');
-    const [signature, setSignature] = useState(user.assinatura_base64 || '');
+    const [signature, setSignature] = useState(user.signature_url || user.signatureUrl || '');
 
     // Address (Migrated from Profile)
     const initialAddress = user.enderecos && user.enderecos.length > 0 ? user.enderecos[0] : null;
@@ -275,7 +272,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
     const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
     const [creatingWhatsApp, setCreatingWhatsApp] = useState(false);
 
-    const isSuperAdmin = user?.cargo === 'super_admin';
+    const isAdmin = user?.cargo === 'admin';
     const isPrestador = user?.cargo === 'prestador';
 
     const queryClient = useQueryClient();
@@ -287,7 +284,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
             const res = await api.get('/empresas/me');
             return res.data;
         },
-        enabled: !!(isSuperAdmin || isPrestador),
+        enabled: !!isAdmin,
     });
 
     // Sync company state
@@ -546,11 +543,70 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
                     await api.put('/usuarios/me/senha', { novaSenha: password });
                     setPassword('');
                     setConfirmPassword('');
+            // Upload signature if changed and is base64
+            let finalSignatureUrl = signature;
+            if (signature && signature.startsWith('data:image')) {
+                 const { uploadFile } = await import('../services/uploadService');
+                 const res = await fetch(signature);
+                 const blob = await res.blob();
+                 const file = new File([blob], `signature_${Date.now()}.png`, { type: 'image/png' });
+                 finalSignatureUrl = await uploadFile(file, 'signatures');
+            }
+
+            const payload = {
+                nome_completo: name,
+                email: email,
+                telefone: phone,
+                cpf: cpf,
+                avatar_url: avatar,
+                signature_url: finalSignatureUrl, // Renamed
+                endereco: {
+                    cep: cep,
+                    logradouro: street,
+                    numero: number,
+                    complemento: complement,
+                    bairro: neighborhood,
+                    cidade: city,
+                    estado: state
                 }
+            };
+
+            await api.put('/usuarios/me', payload);
+
+            // Reload user data to context
+            // Assuming updateUser updates the context
+            updateUser({
+                ...user,
+                nome_completo: name,
+                email: email,
+                telefone: phone,
+                cpf: cpf,
+                avatar_url: avatar,
+                assinaturaBase64: finalSignatureUrl, // Keep original field name for context
+                cep: cep,
+                logradouro: street,
+                numero: number,
+                complemento: complement,
+                bairro: neighborhood,
+                cidade: city,
+                estado: state
+            });
+
+            notify('Perfil atualizado com sucesso!', 'success');
+            // setMode('VIEW'); // Assuming setMode is defined elsewhere if needed
+
+            if (password && password.length >= 6) {
+                if (password !== confirmPassword) {
+                    notify('As senhas não conferem.', 'error');
+                    return;
+                }
+                await api.put('/usuarios/me/senha', { novaSenha: password });
+                setPassword('');
+                setConfirmPassword('');
             }
 
             // Salvar dados da empresa se aplicável
-            if (isSuperAdmin || isPrestador) {
+            if (isAdmin || isPrestador) {
                 await api.put('/empresas/me', {
                     nomeFantasia: empresa.nomeFantasia,
                     cnpj: empresa.cnpj,
@@ -585,12 +641,10 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
         { id: 'seguranca', label: 'Segurança', icon: Lock },
         { id: 'assinatura_digital', label: 'Assinatura Digital', icon: PenTool },
         { id: 'equipamentos', label: 'Equipamentos', icon: Wrench },
-        ...(isSuperAdmin || isPrestador ? [{ id: 'empresa', label: 'Dados da Empresa', icon: Building }] : []),
+        ...(isAdmin ? [{ id: 'empresa', label: 'Dados da Empresa', icon: Building }] : []),
         { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
         { id: 'notificacoes', label: 'Notificações', icon: Bell },
-        ...(isSuperAdmin || isPrestador ? [{ id: 'fiscal', label: 'NFS-e', icon: FileText }] : []),
-        { id: 'pagamento', label: 'Pagamento', icon: Wallet },
-        { id: 'assinatura', label: 'Assinatura', icon: CreditCard },
+        ...(isAdmin ? [{ id: 'fiscal', label: 'NFS-e', icon: FileText }] : []),
         { id: 'automacao', label: 'Automação', icon: SettingsIcon },
         { id: 'agenda', label: 'Agenda', icon: Calendar },
     ];
@@ -692,7 +746,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label className="text-sm font-medium text-surface-600 mb-1 block">CPF</label>
-                                            <input type="text" value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} maxLength={14} readOnly={user.cargo !== 'super_admin'} className={`w-full border border-surface-200 rounded-xl py-3 px-4 ${user.cargo !== 'super_admin' ? 'bg-surface-100 cursor-not-allowed' : ''}`} placeholder="000.000.000-00" />
+                                            <input type="text" value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} maxLength={14} readOnly={user.cargo !== 'admin'} className={`w-full border border-surface-200 rounded-xl py-3 px-4 ${user.cargo !== 'admin' ? 'bg-surface-100 cursor-not-allowed' : ''}`} placeholder="000.000.000-00" />
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-surface-600 mb-1 block">Telefone</label>
@@ -829,7 +883,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
                         )}
 
                         {/* Empresa */}
-                        {activeSection === 'empresa' && (isSuperAdmin || isPrestador) && (
+                        {activeSection === 'empresa' && isAdmin && (
                             <div className="bg-white rounded-2xl shadow-sm border border-surface-200 p-5">
                                 <h2 className="text-lg font-bold text-surface-800 mb-4 flex items-center gap-2">
                                     <Building className="w-5 h-5 text-brand-500" /> Dados da Empresa
@@ -992,7 +1046,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
                         )}
 
                         {/* Fiscal */}
-                        {activeSection === 'fiscal' && (isSuperAdmin || isPrestador) && (
+                        {activeSection === 'fiscal' && isAdmin && (
                             <div className="bg-white rounded-2xl shadow-sm border border-surface-200 p-5">
                                 <h2 className="text-lg font-bold text-surface-800 mb-4 flex items-center gap-2">
                                     <FileText className="w-5 h-5 text-brand-500" /> Emissão de NFS-e
@@ -1100,19 +1154,6 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
                             </div>
                         )}
 
-                        {/* Pagamento */}
-                        {activeSection === 'pagamento' && (
-                            <div className="bg-white rounded-2xl shadow-sm border border-surface-200 p-5">
-                                <PaymentSettings user={user} embedded />
-                            </div>
-                        )}
-
-                        {/* Assinatura */}
-                        {activeSection === 'assinatura' && (
-                            <div className="bg-white rounded-2xl shadow-sm border border-surface-200 p-5">
-                                <SubscriptionSettings user={user} embedded />
-                            </div>
-                        )}
 
                         {activeSection === 'automacao' && (
                             <AutomacaoSettings user={user} />

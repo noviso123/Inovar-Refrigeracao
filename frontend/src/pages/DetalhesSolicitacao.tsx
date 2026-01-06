@@ -8,7 +8,7 @@ import {
     MapPin, Calendar, Wrench, User as UserIcon, DollarSign, Check, X, ArrowLeft,
     UserMinus, Zap, FileText, Send, CalendarCheck, Camera, Loader2, Plus, Trash2,
     ShoppingCart, Clock, ShieldAlert, ChevronRight, LayoutDashboard, Image as ImageIcon,
-    History, Phone, Mail, Navigation, PenTool, CheckCircle, MessageCircle, Receipt, RefreshCw, Edit2
+    History, Phone, Mail, Navigation, PenTool, CheckCircle, MessageCircle, Receipt, RefreshCw, Edit2, Paperclip
 } from 'lucide-react';
 import { ServiceDocument } from '../components/DocumentoServico';
 import { ModalNFSe } from '../components/ModalNFSe';
@@ -61,21 +61,21 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
     }, [request.id]);
 
     // Quote State
-    const [quoteItems, setQuoteItems] = useState<ItemOS[]>(request.itens_os || []);
+    const [quoteItems, setQuoteItems] = useState<ItemOS[]>(request.itens || []);
     const [newItemDesc, setNewItemDesc] = useState('');
     const [newItemQty, setNewItemQty] = useState<string>('1');
     const [newItemPrice, setNewItemPrice] = useState<string>('');
-    const [quoteDesc, setQuoteDesc] = useState<string>(request.descricao_orcamento || '');
+    const [quoteDesc, setQuoteDesc] = useState<string>(request.description || '');
 
     // Sync local state with prop updates
     useEffect(() => {
-        if (request.itens_os) {
-            setQuoteItems(request.itens_os);
+        if (request.itens) {
+            setQuoteItems(request.itens);
         }
-        if (request.descricao_orcamento) {
-            setQuoteDesc(request.descricao_orcamento);
+        if (request.description) {
+            setQuoteDesc(request.description);
         }
-    }, [request.itens_os, request.descricao_orcamento]);
+    }, [request.itens, request.description]);
 
     // Assignment State
     const [selectedTech, setSelectedTech] = useState<string | ''>('');
@@ -85,7 +85,7 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
     const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
     const [isNFSeModalOpen, setIsNFSeModalOpen] = useState(false);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-    const [scheduleDate, setScheduleDate] = useState<string>(request.data_agendamento_inicio || '');
+    const [scheduleDate, setScheduleDate] = useState<string>(request.scheduled_at || '');
     const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
     const [trackingNote, setTrackingNote] = useState('');
 
@@ -95,8 +95,8 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
 
     // Completion State
     const [showFinishModal, setShowFinishModal] = useState(false);
-    const [clientSignature, setClientSignature] = useState(request.assinatura_cliente || '');
-    const [technicianSignature, setTechnicianSignature] = useState(request.assinatura_tecnico || '');
+    const [clientSignature, setClientSignature] = useState(request.client_signature || '');
+    const [technicianSignature, setTechnicianSignature] = useState(request.tech_signature || '');
 
     // Wizard State
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -153,24 +153,24 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
             const newStatus = data.nfseResult ? 'faturado' : 'concluido';
             await onUpdate(request.id as number, {
                 status: newStatus,
-                relatorio_tecnico: data.technicalReport, // Salvar no campo correto
-                fotos_os: [...(request.fotos_os || []), ...data.photos.map((p: string) => ({ imagem_base64: p }))],
-                assinatura_tecnico: data.adminBypass ? null : data.techSignature,
-                assinatura_cliente: data.adminBypass ? null : data.clientSignature,
+                technical_report: data.technicalReport, // Salvar no campo correto
+                fotos: [...(request.fotos || []), ...data.photos.map((p: string) => ({ url: p }))],
+                tech_signature: data.adminBypass ? undefined : data.techSignature,
+                client_signature: data.adminBypass ? undefined : data.clientSignature,
                 relatorio_disponivel: true,
-                data_fim_real: new Date().toISOString(),
+                completed_at: new Date().toISOString(),
                 nfse: data.nfseResult || undefined
-            }, `[Diário de Obra] Relatório Técnico Final (OS #${request.numero || request.id}):\n${data.technicalReport}`);
+            }, `[Diário de Obra] Relatório Técnico Final (OS #${request.sequential_id || request.id}):\n${data.technicalReport}`);
 
             // 2. Send WhatsApp notification with OS and NFSe info
-            const clientePhone = request.clientes?.telefone;
+            const clientePhone = request.cliente?.telefone;
             if (clientePhone) {
                 try {
                     const nfseInfo = data.nfseResult
                         ? `\n\n📄 *NFS-e Emitida:*\n   Número: ${data.nfseResult.numero}\n   Código Verificação: ${data.nfseResult.codigo_verificacao}`
                         : '';
 
-                    const osMessage = `✅ *Serviço Concluído!*\n\nOlá ${request.clientes?.nome || 'Cliente'}!\n\nSeu serviço foi finalizado com sucesso.\n\n📋 *OS:* #${request.numero || request.id}\n📝 *Título:* ${request.titulo}\n💰 *Valor:* R$ ${(request.valor_total || 0).toFixed(2)}${nfseInfo}\n\nObrigado pela preferência! 🙏`;
+                    const osMessage = `✅ *Serviço Concluído!*\n\nOlá ${request.cliente?.nome || 'Cliente'}!\n\nSeu serviço foi finalizado com sucesso.\n\n📋 *OS:* #${request.sequential_id || request.id}\n📝 *Título:* ${request.titulo}\n💰 *Valor:* R$ ${(request.valor_total || 0).toFixed(2)}${nfseInfo}\n\nObrigado pela preferência! 🙏`;
 
                     await whatsappService.sendMessage(clientePhone, osMessage);
                     notify('Mensagem de conclusão enviada via WhatsApp!', 'success');
@@ -219,9 +219,9 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
     };
 
     // Equipment State - Initialize with equipments from existing items
-    const initialEquipments = (request.itens_os || [])
-        .filter(item => item.equipamentos && item.equipamentos.id)
-        .map(item => item.equipamentos!);
+    const initialEquipments = (request.itens || [])
+        .filter(item => item.equipamento && item.equipamento.id)
+        .map(item => item.equipamento!);
 
     console.log('DetalhesSolicitacao: Initial equipments from itens_os:', initialEquipments);
 
@@ -319,12 +319,11 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
         if (!selectedTech) return;
         const tech = technicians.find(t => t.id === parseInt(selectedTech));
         if (tech) {
-            const isSwap = !!request.tecnico_id;
             onUpdate(request.id, {
                 status: 'agendado',
-                tecnico_id: tech.id,
-                tecnicos: tech
-            }, isSwap ? `Técnico alterado para ${tech.nome_completo}` : 'Técnico atribuído');
+                tech_id: tech.id,
+                tech: tech
+            }, 'Técnico atribuído');
             setIsAssigning(false);
         }
     };
@@ -332,12 +331,12 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
     const handleUpdateSchedule = async (newDate: string) => {
         setIsSyncingCalendar(true);
         try {
-            await onUpdate(request.id, { data_agendamento_inicio: newDate }, `Agendado para ${new Date(newDate).toLocaleString()}`);
+            await onUpdate(request.id, { scheduled_at: newDate }, `Agendado para ${new Date(newDate).toLocaleString()}`);
             setScheduleDate(newDate);
             notify('Agendamento salvo.', 'success');
 
             // Enviar notificação automática via WhatsApp
-            const clientPhone = request.clientes?.telefone?.replace(/\D/g, '');
+            const clientPhone = request.cliente?.telefone?.replace(/\D/g, '');
             if (clientPhone) {
                 try {
                     // Obter nome da instância do usuário
@@ -359,14 +358,14 @@ export const ServiceRequestDetails: React.FC<Props> = ({ request, user, onBack, 
                             day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
                         });
 
-                        const mensagem = `Olá ${request.clientes?.nome?.split(' ')[0] || 'Cliente'}!
+                        const mensagem = `Olá ${request.cliente?.nome?.split(' ')[0] || 'Cliente'}!
 
 📅 *AGENDAMENTO CONFIRMADO*
 
 Seu serviço foi agendado para:
 *${dataFormatada}*
 
-OS: #${request.numero || request.id}
+OS: #${request.sequential_id || request.id}
 Serviço: ${request.titulo || 'Manutenção'}
 
 _${companyName}_`;
@@ -391,31 +390,35 @@ _${companyName}_`;
         if (!e.target.files || e.target.files.length === 0) return;
         setIsUploading(true);
         const files = Array.from(e.target.files) as File[];
+
         try {
-            const promises = files.map(file => new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            }));
-            const urls = await Promise.all(promises);
+            const { uploadFile } = await import('../services/uploadService');
+
+            // Upload sequentially or parallel - parallel is fine for ImgBB
+            const uploadPromises = files.map(file => uploadFile(file, 'service-evidence'));
+            const urls = await Promise.all(uploadPromises);
+
             setTempPhotos(prev => [...prev, ...urls]);
+            notify(`${urls.length} foto(s) enviada(s)!`, 'success');
         } catch (error) {
-            notify('Erro ao fazer upload.', 'error');
+            console.error(error);
+            notify('Erro ao fazer upload das fotos.', 'error');
         } finally {
             setIsUploading(false);
+            // Reset input
+            e.target.value = '';
         }
     };
 
     const handleAddTrackingNote = async () => {
         if (!trackingNote.trim() && tempPhotos.length === 0) return;
 
-        // Create the new history entry with photos embedded
+        // Create the new history entry with photos embedded (URLs now, not base64)
         const newHistoryItem = {
             data: new Date().toISOString(),
             descricao: `[Diário de Obra] ${trackingNote || 'Registro de evidências'}`,
             usuario: user.nome_completo || user.nome || 'Sistema',
-            fotos: tempPhotos.length > 0 ? tempPhotos : undefined // Embed photos directly in entry
+            fotos: tempPhotos.length > 0 ? tempPhotos : undefined // URLs directly
         };
 
         // Append to existing history
@@ -424,11 +427,11 @@ _${companyName}_`;
             historico_json: [...currentHistory, newHistoryItem]
         };
 
-        // Also update fotos_os for gallery view
+        // Also update fotos for gallery view
         if (tempPhotos.length > 0) {
-            const existingPhotos = request.fotos_os || [];
-            const newPhotos = tempPhotos.map(base64 => ({ imagem_base64: base64 }));
-            updates.fotos_os = [...existingPhotos, ...newPhotos];
+            const existingPhotos = request.fotos || [];
+            const newPhotos = tempPhotos.map(url => ({ url: url }));
+            updates.fotos = [...existingPhotos, ...newPhotos];
         }
 
         await onUpdate(request.id, updates, ''); // Note is already in history entry
@@ -444,7 +447,7 @@ _${companyName}_`;
         }
         onUpdate(request.id, {
             status: 'em_andamento',
-            data_inicio_real: new Date().toISOString()
+            // data_inicio_real removed if not in schema
         }, `Gerou Ordem de Serviço (Início de Execução)`);
         setTimeout(() => setViewingDoc('REPORT'), 500);
     };
@@ -452,8 +455,8 @@ _${companyName}_`;
     const handleFinalizeWithSignatures = () => {
         onUpdate(request.id, {
             status: 'concluido',
-            assinatura_cliente: clientSignature,
-            assinatura_tecnico: technicianSignature,
+            client_signature: clientSignature,
+            tech_signature: technicianSignature,
             relatorio_disponivel: true
         }, 'Serviço concluído com assinaturas');
         setShowFinishModal(false);
@@ -464,8 +467,8 @@ _${companyName}_`;
             onUpdate(request.id, {
                 status: 'concluido',
                 relatorio_disponivel: true,
-                assinatura_cliente: undefined,
-                assinatura_tecnico: undefined
+                client_signature: undefined,
+                tech_signature: undefined
             }, `Serviço concluído ADMINISTRATIVAMENTE por ${user.nome_completo}`);
             setShowFinishModal(false);
         }
@@ -494,7 +497,7 @@ _${companyName}_`;
     };
 
     const handleSendWhatsApp = () => {
-        if (!request.clientes?.telefone) {
+        if (!request.cliente?.telefone) {
             notify('Cliente sem telefone cadastrado.', 'error');
             return;
         }
@@ -530,7 +533,7 @@ _${companyName}_`;
                                     <ArrowLeft className="w-5 h-5 text-white/80" />
                                 </button>
                                 <span className="text-xs font-mono bg-white/10 px-2 py-1 rounded text-white/80">
-                                    OS #{request.numero || request.codigoOs || request.codigo_os || request.id}
+                                    OS #{request.sequential_id || request.id}
                                 </span>
                                 <StatusBadge status={request.status} />
                                 <button
@@ -544,8 +547,8 @@ _${companyName}_`;
                             </div>
                             <h1 className="text-2xl font-bold text-white">{request.titulo}</h1>
                             <div className="flex items-center gap-4 mt-2 text-blue-100 text-sm flex-wrap">
-                                <span className="flex items-center"><UserIcon className="w-3 h-3 mr-1" /> {request.clientes?.nome}</span>
-                                <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" /> {formatarData(request.criado_em || request.criadoEm)}</span>
+                                <span className="flex items-center"><UserIcon className="w-3 h-3 mr-1" /> {request.cliente?.nome}</span>
+                                <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" /> {formatarData(request.created_at || (request as any).criado_em)}</span>
                                 {request.nfse?.numero && (
                                     <span className="flex items-center bg-brand-500 text-white px-3 py-1 rounded-full font-bold text-sm">
                                         <Receipt className="w-4 h-4 mr-2" />
@@ -633,12 +636,12 @@ _${companyName}_`;
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                                 <h4 className="font-bold text-blue-900 mb-2 flex items-center"><Wrench className="w-4 h-4 mr-2" /> Equipamento(s)</h4>
-                                                {quoteItems && quoteItems.length > 0 && quoteItems.some(item => item.equipamentos) ? (
+                                                {quoteItems && quoteItems.length > 0 && quoteItems.some(item => item.equipamento) ? (
                                                     <div className="space-y-2">
                                                         {Array.from(new Map(
                                                             quoteItems
-                                                                .filter(item => item.equipamentos)
-                                                                .map(item => [item.equipamentos!.id, item.equipamentos!])
+                                                                .filter(item => item.equipamento)
+                                                                .map(item => [item.equipamento!.id, item.equipamento!])
                                                         ).values()).map((equip, idx) => (
                                                             <div key={idx} className="text-sm text-blue-800 border-b border-blue-200 last:border-0 pb-1 last:pb-0">
                                                                 <p className="font-semibold">{equip.nome || "Equipamento não identificado"}</p>
@@ -659,7 +662,7 @@ _${companyName}_`;
                                             <div className="bg-brand-50 p-4 rounded-lg border border-brand-50">
                                                 <h4 className="font-bold text-brand-700 mb-2 flex items-center"><MapPin className="w-4 h-4 mr-2" /> Localização</h4>
                                                 <p className="text-sm text-brand-600">
-                                                    {(Array.isArray(request.clientes) ? request.clientes[0]?.endereco : request.clientes?.endereco) || "Endereço não cadastrado"}
+                                                    {request.local?.address || "Endereço não cadastrado"}
                                                 </p>
                                             </div>
                                         </div>
@@ -688,7 +691,7 @@ _${companyName}_`;
                                                 <tbody className="divide-y divide-gray-100">
                                                     {quoteItems.map(item => (
                                                         <tr key={item.id} className="hover:bg-gray-50">
-                                                            <td className="p-3">{item.descricao_tarefa}</td>
+                                                            <td className="p-3">{item.descricao}</td>
                                                             <td className="p-3 text-center">{item.quantidade}</td>
                                                             <td className="p-3 text-right">R$ {(item.valor_unitario || 0).toFixed(2)}</td>
                                                             <td className="p-3 text-right font-bold text-gray-900">R$ {(item.valor_total || 0).toFixed(2)}</td>
@@ -735,22 +738,39 @@ _${companyName}_`;
 
                                                     {tempPhotos.length > 0 && (
                                                         <div className="flex gap-2 overflow-x-auto pb-2">
-                                                            {tempPhotos.map((photo, i) => (
-                                                                <div key={i} className="relative group flex-shrink-0">
-                                                                    <img src={photo} className="h-20 w-20 object-cover rounded-lg border border-blue-200 shadow-sm" alt="Preview" />
-                                                                    <button onClick={() => setTempPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition">
-                                                                        <X className="w-3 h-3" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
+                                                            {tempPhotos.map((photo, i) => {
+                                                                const isImg = photo.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i) || photo.startsWith('data:image');
+                                                                return (
+                                                                    <div key={i} className="relative group flex-shrink-0">
+                                                                        {isImg ? (
+                                                                            <img src={photo} className="h-20 w-20 object-cover rounded-lg border border-blue-200 shadow-sm" alt="Preview" />
+                                                                        ) : (
+                                                                            <div className="h-20 w-20 flex flex-col items-center justify-center bg-gray-50 rounded-lg border border-blue-200 shadow-sm text-blue-600">
+                                                                                <FileText className="w-8 h-8 mb-1" />
+                                                                                <span className="text-[9px] uppercase font-bold text-blue-400">DOC</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <button onClick={() => setTempPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition">
+                                                                            <X className="w-3 h-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
                                                     )}
                                                 </div>
 
                                                 <div className="flex flex-col gap-2">
                                                     <label className="cursor-pointer bg-white border border-blue-200 text-blue-600 rounded-lg p-3 hover:bg-blue-50 transition shadow-sm flex items-center justify-center h-[50px] w-[50px]">
-                                                        {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
-                                                        <input type="file" className="hidden" accept="image/*" multiple onChange={handleTempPhotoUpload} disabled={isUploading} />
+                                                        {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Paperclip className="w-6 h-6" />}
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
+                                                            multiple
+                                                            onChange={handleTempPhotoUpload}
+                                                            disabled={isUploading}
+                                                        />
                                                     </label>
                                                     <Button onClick={handleAddTrackingNote} disabled={!trackingNote.trim() && tempPhotos.length === 0} className="h-[50px] w-[50px] p-0 flex items-center justify-center">
                                                         <Send className="w-5 h-5" />
@@ -760,17 +780,30 @@ _${companyName}_`;
                                         </div>
 
                                         {/* Photos Gallery */}
-                                        {request.fotos_os && request.fotos_os.length > 0 ? (
+                                        {request.fotos && request.fotos.length > 0 ? (
                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                                {request.fotos_os.map((foto: any, idx: number) => (
-                                                    <div key={idx} className="aspect-square border rounded-lg overflow-hidden bg-gray-100 shadow-sm">
-                                                        <img
-                                                            src={getImageUrl(foto)}
-                                                            alt={`Evidência ${idx + 1}`}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    </div>
-                                                ))}
+                                                {request.fotos.map((foto: any, idx: number) => {
+                                                    const url = getImageUrl(foto);
+                                                    const isImg = url.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i) || url.includes('imgbb.com'); // Simple check
+
+                                                    return (
+                                                        <div key={idx} className="aspect-square border rounded-lg overflow-hidden bg-gray-100 shadow-sm relative group">
+                                                            {isImg ? (
+                                                                <img
+                                                                    src={url}
+                                                                    alt={`Evidência ${idx + 1}`}
+                                                                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                    onClick={() => window.open(url, '_blank')}
+                                                                />
+                                                            ) : (
+                                                                <a href={url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex flex-col items-center justify-center hover:bg-gray-200 transition">
+                                                                    <FileText className="w-12 h-12 text-gray-400 mb-2" />
+                                                                    <span className="text-xs font-semibold text-gray-500 px-2 text-center truncate w-full">Abrir Documento</span>
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         ) : (
                                             <div className="text-center p-12 border-2 border-dashed border-gray-200 rounded-xl">
@@ -780,14 +813,14 @@ _${companyName}_`;
                                         )}
 
                                         {/* Diário de Atividades - Activity Log */}
-                                        {request.historico_json && Array.isArray(request.historico_json) &&
-                                            request.historico_json.filter((h: any) => h.descricao?.includes('[Diário de Obra]')).length > 0 && (
+                                        {request.historico && Array.isArray(request.historico) &&
+                                            request.historico.filter((h: any) => h.descricao?.includes('[Diário de Obra]')).length > 0 && (
                                                 <div className="mt-6 bg-gray-50 rounded-xl border border-gray-200 p-4">
                                                     <h4 className="font-bold text-gray-900 mb-4 flex items-center">
                                                         <History className="w-5 h-5 mr-2 text-blue-600" /> Diário de Atividades
                                                     </h4>
                                                     <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                                                        {request.historico_json
+                                                        {request.historico
                                                             .filter((h: any) => h.descricao?.includes('[Diário de Obra]'))
                                                             .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime())
                                                             .map((entry: any, idx: number) => (
@@ -843,8 +876,8 @@ _${companyName}_`;
                                 {activeTab === 'history' && (
                                     <div className="space-y-4">
                                         <h3 className="text-lg font-bold text-gray-900 mb-4">Linha do Tempo</h3>
-                                        {request.historico_json && Array.isArray(request.historico_json) ? (
-                                            <ServiceTimeline history={request.historico_json} currentStatus={request.status} />
+                                        {request.historico && Array.isArray(request.historico) ? (
+                                            <ServiceTimeline history={request.historico} currentStatus={request.status} />
                                         ) : (
                                             <p className="text-gray-500 italic text-center py-8">Nenhum histórico registrado.</p>
                                         )}
@@ -919,16 +952,16 @@ _${companyName}_`;
                             <h3 className="font-bold text-gray-900 mb-4 flex items-center"><UserIcon className="w-4 h-4 mr-2 text-gray-400" /> Cliente</h3>
                             <div className="space-y-3">
                                 <div>
-                                    <p className="text-sm font-bold text-gray-900">{request.clientes?.nome}</p>
-                                    <p className="text-xs text-gray-500">{request.clientes?.email}</p>
+                                    <p className="text-sm font-bold text-gray-900">{request.cliente?.nome}</p>
+                                    <p className="text-xs text-gray-500">{request.cliente?.email}</p>
                                 </div>
                                 <div className="flex items-start gap-2 text-sm text-gray-600">
                                     <MapPin className="w-4 h-4 mt-0.5 text-gray-400" />
-                                    <span>{request.clientes?.endereco || "Endereço não informado"}</span>
+                                    <span>{request.local?.address || "Endereço não informado"}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                     <Phone className="w-4 h-4 text-gray-400" />
-                                    <span>{request.clientes?.telefone || "Sem telefone"}</span>
+                                    <span>{request.cliente?.telefone || "Sem telefone"}</span>
                                 </div>
                                 <Button variant="secondary" size="sm" className="w-full mt-2 text-xs">
                                     <Navigation className="w-3 h-3 mr-2" /> Ver no Mapa
@@ -938,19 +971,16 @@ _${companyName}_`;
 
                         {/* Technician Card */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h3 className="font-bold text-gray-900 mb-4 flex items-center"><Wrench className="w-4 h-4 mr-2 text-gray-400" /> Técnico Responsável</h3>
+                            <h3 className="font-bold text-gray-900 mb-4 flex items-center"><Wrench className="w-4 h-4 mr-2 text-gray-400" /> Responsável</h3>
 
-                            {/* Always show technician - use OS creator as fallback */}
+                            {/* Always show tech / fallbacks */}
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                                    {(request.tecnicos?.nome_completo || request.tecnicos?.nome || (request.tecnicos as any)?.name || (request as any).criado_por_nome || (request as any).criadoPorNome || 'R').charAt(0)}
+                                    {(request.tech?.nome_completo || 'R').charAt(0)}
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-gray-900">
-                                        {request.tecnicos?.nome_completo || request.tecnicos?.nome || (request.tecnicos as any)?.name || (request as any).criado_por_nome || (request as any).criadoPorNome || 'Responsável'}
-                                    </p>
-                                    <p className="text-xs text-brand-500 font-medium">
-                                        {request.tecnicos ? 'Atribuído' : 'Criador da OS'}
+                                        {request.tech?.nome_completo || 'Responsável'}
                                     </p>
                                 </div>
                             </div>
@@ -959,7 +989,7 @@ _${companyName}_`;
                                 <div>
                                     {!isAssigning ? (
                                         <Button variant="secondary" size="sm" className="w-full" onClick={() => setIsAssigning(true)}>
-                                            {request.tecnicos ? 'Alterar Técnico' : 'Atribuir Técnico'}
+                                            {request.tech ? 'Alterar Responsável' : 'Atribuir Responsável'}
                                         </Button>
                                     ) : (
                                         <div className="space-y-2 animate-in fade-in">
@@ -1000,8 +1030,8 @@ _${companyName}_`;
                 <ServiceDocument
                     request={{
                         ...request,
-                        itens_os: quoteItems, // Pass local state for immediate updates
-                        descricao_orcamento: quoteDesc // Pass local description too
+                        itens: quoteItems, // Pass local state for immediate updates
+                        description: quoteDesc // Pass local description too
                     }}
                     type={viewingDoc}
                     onClose={() => setViewingDoc(null)}
@@ -1028,14 +1058,14 @@ _${companyName}_`;
                     valorTotal: request.valor_total || 0,
                     nfseExistente: Boolean(request.nfse?.numero),
                     solicitacaoId: String(request.id),
-                    osDisplayNumber: String(request.numero || request.codigoOs || request.codigo_os || request.id),
-                    clienteNome: request.clientes?.nome || '',
-                    clienteCpfCnpj: request.clientes?.cpf || request.clientes?.cnpj || '',
-                    clienteTelefone: request.clientes?.telefone || '',
-                    itensOs: request.itens_os || []
+                    osDisplayNumber: String(request.sequential_id || request.id),
+                    clienteNome: request.cliente?.nome || '',
+                    clienteCpfCnpj: request.cliente?.cpf || (request.cliente as any)?.cnpj || '',
+                    clienteTelefone: request.cliente?.telefone || '',
+                    itensOs: request.itens || []
                 }}
-                isAdmin={user.cargo === 'super_admin' || user.cargo === 'prestador'}
-                userSignature={user.assinatura_base64}
+                isAdmin={user.cargo === 'admin' || user.cargo === 'prestador'}
+                userSignature={user.signature_url || user.signatureUrl}
             />
 
             {/* Legacy Modal (kept for fallback if needed, or remove completely? Removing to avoid confusion) */}
