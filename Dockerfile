@@ -1,10 +1,14 @@
 # Build Stage for Frontend
 FROM node:18-alpine as frontend-build
-WORKDIR /app/frontend
 # Copy dependency definitions
-COPY frontend/package.json frontend/package-lock.json ./
+# Try to copy package-lock.json if it exists, otherwise just package.json
+COPY frontend/package.json ./
+# If you have a lock file, copy it. If not, this line might fail or be skipped depending on context,
+# but explicitly copying just package.json is safer if lock is missing.
+# Ideally: COPY frontend/package*.json ./
+COPY frontend/package*.json ./
 # Install dependencies
-RUN npm ci
+RUN npm install
 # Copy source code
 COPY frontend/ ./
 # Build the application
