@@ -1,0 +1,20 @@
+{
+  "id": 1,
+  "nomeFantasia": "Inovar Refrigeração App",
+  "nome_fantasia": "Inovar Refrigeração App",
+  "cnpj": "12.311.111/0000-01",
+  "email": "inovar@inovar.com",
+  "emailContato": "inovar@inovar.com",
+  "email_contato": "inovar@inovar.com",
+  "telefone": "(24) 99999-9999",
+  "telefoneContato": "(24) 99999-9999",
+  "telefone_contato": "(24) 99999-9999",
+  "endereco": "Avenida dos expedicion\u00e1rios, 345",
+  "enderecoCompleto": "Avenida dos expedicion\u00e1rios, 345",
+  "endereco_completo": "Avenida dos expedicion\u00e1rios, 345",
+  "codigoServico": "14.01",
+  "aliquotaISS": "2.00",
+  "ambienteFiscal": "homologacao",
+  "logoUrl": "/files/logos/d43beea9-9b17-4c0c-9d30-dabf41765a5a.png",
+  "logo_url": "/files/logos/d43beea9-9b17-4c0c-9d30-dabf41765a5a.png"
+}
