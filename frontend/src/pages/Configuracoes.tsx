@@ -627,8 +627,8 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
             }
 
             notify('Configurações salvas com sucesso!', 'success');
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            console.error('Erro ao salvar:', error);
             notify('Erro ao salvar configurações', 'error');
         } finally {
             setIsSaving(false);
