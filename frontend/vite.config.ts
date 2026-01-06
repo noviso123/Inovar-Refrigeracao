@@ -19,56 +19,57 @@ export default defineConfig(({ mode }) => {
           ]
         }
       }),
-      VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'icons/apple-touch-icon.png'],
-        manifest: {
-          name: 'Inovar Refrigeração',
-          short_name: 'Inovar Refrigeração',
-          description: 'Sistema de gestão para Inovar Refrigeração',
-          theme_color: '#3b82f6',
-          background_color: '#f8fafc',
-          display: 'standalone',
-          orientation: 'portrait-primary',
-          start_url: '/',
-          id: '/',
-          categories: ['business', 'productivity'],
-          icons: [
-            {
-              src: '/icons/icon-192x192.png',
-              sizes: '192x192',
-              type: 'image/png'
-            },
-            {
-              src: '/icons/icon-512x512.png',
-              sizes: '512x512',
-              type: 'image/png'
-            },
-            {
-              src: '/icons/icon-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable'
-            }
-          ]
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-          runtimeCaching: [
-            {
-              urlPattern: /\/api\/.*/i,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'api-cache',
-                expiration: {
-                  maxEntries: 50,
-                  maxAgeSeconds: 300
-                }
-              }
-            }
-          ]
-        }
-      })
+      // VitePWA temporarily disabled for build fix - can be re-enabled later
+      // VitePWA({
+      //   registerType: 'autoUpdate',
+      //   includeAssets: ['favicon.ico', 'icons/apple-touch-icon.png'],
+      //   manifest: {
+      //     name: 'Inovar Refrigeração',
+      //     short_name: 'Inovar Refrigeração',
+      //     description: 'Sistema de gestão para Inovar Refrigeração',
+      //     theme_color: '#3b82f6',
+      //     background_color: '#f8fafc',
+      //     display: 'standalone',
+      //     orientation: 'portrait-primary',
+      //     start_url: '/',
+      //     id: '/',
+      //     categories: ['business', 'productivity'],
+      //     icons: [
+      //       {
+      //         src: '/icons/icon-192x192.png',
+      //         sizes: '192x192',
+      //         type: 'image/png'
+      //       },
+      //       {
+      //         src: '/icons/icon-512x512.png',
+      //         sizes: '512x512',
+      //         type: 'image/png'
+      //       },
+      //       {
+      //         src: '/icons/icon-512x512.png',
+      //         sizes: '512x512',
+      //         type: 'image/png',
+      //         purpose: 'maskable'
+      //       }
+      //     ]
+      //   },
+      //   workbox: {
+      //     globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+      //     runtimeCaching: [
+      //       {
+      //         urlPattern: /\/api\/.*/i,
+      //         handler: 'NetworkFirst',
+      //         options: {
+      //           cacheName: 'api-cache',
+      //           expiration: {
+      //             maxEntries: 50,
+      //             maxAgeSeconds: 300
+      //           }
+      //         }
+      //       }
+      //     ]
+      //   }
+      // })
     ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),

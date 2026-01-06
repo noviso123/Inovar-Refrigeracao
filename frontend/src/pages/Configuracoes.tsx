@@ -543,6 +543,8 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
                     await api.put('/usuarios/me/senha', { novaSenha: password });
                     setPassword('');
                     setConfirmPassword('');
+                }
+            }
             // Upload signature if changed and is base64
             let finalSignatureUrl = signature;
             if (signature && signature.startsWith('data:image')) {
@@ -627,7 +629,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser }) => {
             }
 
             notify('Configurações salvas com sucesso!', 'success');
-        } catch (error: any) {
+        } catch (error) {
             console.error('Erro ao salvar:', error);
             notify('Erro ao salvar configurações', 'error');
         } finally {

@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // Backend URL
-// For Monolith (Render), default to '' (relative path) so it hits the same domain.
+// For local dev, use http://localhost:8001. For production (Render), use '' for relative paths.
 export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
 export const API_URL = API_BASE ? `${API_BASE}/api` : '/api';
 

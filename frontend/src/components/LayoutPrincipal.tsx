@@ -37,6 +37,8 @@ export const LayoutPrincipal: React.FC<LayoutProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const getMenuItems = () => {
     const isAdmin = user.cargo === 'admin';

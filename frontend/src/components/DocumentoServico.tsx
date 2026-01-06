@@ -686,6 +686,15 @@ export const ServiceDocument: React.FC<Props> = ({ request, type, onClose }) => 
                         {localRequest.historico_json
                           .filter((h: any) => h.descricao?.includes('[Diário de Obra]'))
                           .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime())
+                          .map((h: any, i: number) => (
+                            <div key={i} className="p-2 bg-surface-50 rounded text-xs">
+                              <p className="text-surface-600">{h.descricao?.replace('[Diário de Obra] ', '')}</p>
+                              <p className="text-surface-400 text-[10px] mt-1">{new Date(h.data).toLocaleDateString('pt-BR')}</p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
 
                 {/* Evidence Photos */}
                         {localRequest.fotos_os && localRequest.fotos_os.length > 0 && (

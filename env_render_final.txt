@@ -6,7 +6,7 @@ STATIC_DIR=/app/static
 
 # --- SUPABASE DATABASE ---
 # Connection Pooling (Recommended for Render)
-DATABASE_URL=postgresql://postgres.apntpretjodygczbeozk:InovarRefrig2024SecurePass%21@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres.apntpretjodygczbeozk:inovar862485@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
 
 # --- STORAGE (SUPABASE S3) ---
 # Project Ref: apntpretjodygczbeozk
