@@ -38,6 +38,9 @@ COPY --from=frontend-build /app/frontend/dist /app/static
 # Environment variables
 ENV STATIC_DIR=/app/static
 ENV PORT=8000
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV MALLOC_ARENA_MAX=2
 
 # Expose port
 EXPOSE 8000

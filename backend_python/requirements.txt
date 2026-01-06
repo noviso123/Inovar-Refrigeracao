@@ -15,9 +15,9 @@ pyopenssl==24.0.0
 cryptography==42.0.0
 requests==2.31.0
 numpy<2
-rembg==2.0.50
+# rembg removed - exceeds free tier memory (512MB)
+# onnxruntime removed - only used by rembg
 pillow==10.2.0
-onnxruntime==1.17.0
 
 
 pandas==2.2.0

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -195,10 +196,12 @@ async def rate_limit_middleware(request: Request, call_next):
 # Inicialização: Criar Bucket e Tabelas DB
 @app.on_event("startup")
 async def startup_event():
-    # Start WhatsApp Brain
-    print("🧠 Starting WhatsApp Brain...")
-    print("🧠 Starting WhatsApp Brain...")
-    await brain.start()
+    # Start WhatsApp Brain (graceful - won't crash app if fails)
+    try:
+        print("🧠 Starting WhatsApp Brain...")
+        await brain.start()
+    except Exception as e:
+        logger.warning(f"⚠️ WhatsApp Brain failed to start: {e}")
 
     # Start Scheduler
     start_scheduler()
