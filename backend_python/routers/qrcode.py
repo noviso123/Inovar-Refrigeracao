@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Response
 import qrcode
-from qrcode.image.styled import StyledPilImage
+from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
 from qrcode.image.styles.colormasks import SolidFillColorMask
 import io
