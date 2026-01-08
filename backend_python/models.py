@@ -48,7 +48,6 @@ class User(Base):
     # Profile Data
     phone = Column(String, nullable=True)
     cpf = Column(String, nullable=True)
-    data_nascimento = Column(String, nullable=True)
     estado_civil = Column(String, nullable=True)
     profissao = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
