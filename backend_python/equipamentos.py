@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import Equipment, Location, User
 from pydantic import BaseModel, Field
@@ -14,8 +14,11 @@ router = APIRouter()
 
 from auth import get_current_user
 
-# Pydantic Models
+from pydantic import BaseModel, Field, ConfigDict
+
 class EquipmentBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+    
     nome: str
     marca: Optional[str] = None
     modelo: Optional[str] = None
@@ -24,14 +27,12 @@ class EquipmentBase(BaseModel):
     data_instalacao: Optional[str] = None
     locationId: int = Field(..., alias="location_id")
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 class EquipmentCreate(EquipmentBase):
     pass
 
 class EquipmentUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    
     nome: Optional[str] = None
     marca: Optional[str] = None
     modelo: Optional[str] = None
@@ -39,11 +40,10 @@ class EquipmentUpdate(BaseModel):
     tipo_equipamento: Optional[str] = None
     data_instalacao: Optional[str] = None
 
-    class Config:
-        populate_by_name = True
-
 class EquipmentResponse(EquipmentBase):
     id: int
+    client_name: Optional[str] = None
+    location_name: Optional[str] = None
 
 @router.get("/equipamentos", response_model=List[EquipmentResponse])
 def listar_equipamentos(
@@ -56,11 +56,11 @@ def listar_equipamentos(
     if cached:
         return cached
 
-    query = db.query(Equipment)
+    query = db.query(Equipment).options(joinedload(Equipment.location).joinedload(Location.client))
     if locationId:
         query = query.filter(Equipment.location_id == locationId)
     elif clientId:
-        query = query.join(Location).filter(Location.client_id == clientId)
+        query = query.filter(Location.client_id == clientId)
 
     equipments = query.all()
 
@@ -73,7 +73,9 @@ def listar_equipamentos(
             "numero_serie": e.serial_number,
             "tipo_equipamento": e.equipment_type,
             "data_instalacao": e.installation_date.isoformat() if e.installation_date else None,
-            "locationId": e.location_id
+            "locationId": e.location_id,
+            "client_name": e.location.client.name if e.location and e.location.client else None,
+            "location_name": e.location.nickname if e.location else None
         }
         for e in equipments
     ]
@@ -117,7 +119,9 @@ def criar_equipamento(equip: EquipmentCreate, db: Session = Depends(get_db)):
         "numero_serie": db_equip.serial_number,
         "tipo_equipamento": db_equip.equipment_type,
         "data_instalacao": db_equip.installation_date.isoformat() if db_equip.installation_date else None,
-        "locationId": db_equip.location_id
+        "locationId": db_equip.location_id,
+        "client_name": db_equip.location.client.name if db_equip.location and db_equip.location.client else None,
+        "location_name": db_equip.location.nickname if db_equip.location else None
     }
 
 @router.put("/equipamentos/{equip_id}")

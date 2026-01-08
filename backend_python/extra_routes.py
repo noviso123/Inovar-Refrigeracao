@@ -21,7 +21,10 @@ class BrandingUpdate(BaseModel):
     cnpj: Optional[str] = None
     emailContato: Optional[str] = None
     telefoneContato: Optional[str] = None
-    enderecoCompleto: Optional[str] = None
+    
+    # Address
+    endereco: Optional[dict] = None # { cep, logradouro, numero, ... }
+    
     site: Optional[str] = None
     logoUrl: Optional[str] = None
     # Fiscal
@@ -48,7 +51,15 @@ async def get_system_settings(db: Session = Depends(get_db)):
         "cnpj": settings.cnpj or "",
         "emailContato": settings.email_contact or "",
         "telefoneContato": settings.phone_contact or "",
-        "enderecoCompleto": settings.address or "",
+        "endereco": {
+            "cep": settings.cep,
+            "logradouro": settings.logradouro,
+            "numero": settings.numero,
+            "complemento": settings.complemento,
+            "bairro": settings.bairro,
+            "cidade": settings.cidade,
+            "estado": settings.estado
+        } if settings.cep or settings.logradouro else None,
         "site": settings.website or "",
         "logoUrl": settings.logo_url or "",
         "nfseAtivo": settings.nfse_active,
@@ -70,7 +81,17 @@ async def update_system_settings(data: BrandingUpdate, db: Session = Depends(get
     if data.cnpj: settings.cnpj = data.cnpj
     if data.emailContato: settings.email_contact = data.emailContato
     if data.telefoneContato: settings.phone_contact = data.telefoneContato
-    if data.enderecoCompleto: settings.address = data.enderecoCompleto
+    
+    if data.endereco:
+        addr = data.endereco
+        settings.cep = addr.get("cep")
+        settings.logradouro = addr.get("logradouro") or addr.get("rua")
+        settings.numero = addr.get("numero")
+        settings.complemento = addr.get("complemento")
+        settings.bairro = addr.get("bairro")
+        settings.cidade = addr.get("cidade")
+        settings.estado = addr.get("estado")
+
     if data.site: settings.website = data.site
     if data.logoUrl: settings.logo_url = data.logoUrl
     if data.nfseAtivo is not None: settings.nfse_active = data.nfseAtivo
@@ -135,3 +156,10 @@ async def mark_all_notifications_read(
 @router.get("/health/simple")
 async def get_health_simple():
     return {"status": "ok"}
+
+@router.get("/test-cpf")
+def test_cpf():
+    from validators import cpf_validator
+    gen = cpf_validator.generate()
+    val = cpf_validator.validate(gen)
+    return {"generated": gen, "valid": val}

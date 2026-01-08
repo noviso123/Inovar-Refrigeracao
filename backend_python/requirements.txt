@@ -7,24 +7,16 @@ redis==5.0.1
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.25
 python-multipart==0.0.6
-# boto3 removed for free tier - S3 uploads disabled
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-bcrypt==4.0.1
+bcrypt==3.2.2
 pyopenssl==24.0.0
 cryptography==42.0.0
 requests==2.31.0
-# Heavy deps removed for free tier (512MB limit):
-# - numpy, pandas, pillow, boto3 removed
-# - Install locally if needed
 
 validate-docbr==1.10.0
 
-# Logging and Metrics
-python-json-logger==2.0.7
-prometheus-fastapi-instrumentator==6.1.0
-
-# neonize removed - requires CGO, disabled for cloud deployment
-# Install locally with: pip install neonize==0.3.12
 qrcode==7.4.2
 APScheduler==3.10.4
+supabase==2.3.0
+python-dotenv

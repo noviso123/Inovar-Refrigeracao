@@ -38,5 +38,5 @@ alembic downgrade -1
 
 ## Scripts Auxiliares
 
-- `scripts/create-superadmin.sql` - Criar usuário super admin
-- `scripts/fix-superadmin.ps1` - Corrigir permissões admin
+- `scripts/create-admin.sql` - Criar usuário admin
+- `scripts/fix-admin.ps1` - Corrigir permissões admin

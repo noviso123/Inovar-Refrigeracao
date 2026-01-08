@@ -12,47 +12,81 @@ from database import get_db
 from models import User
 from validators import validate_cpf, validate_cnpj
 
+# Router
+router = APIRouter()
+
 # Configuração Supabase
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "CIfxVzZteqyj/JG//wd0J/GjnwG3CXZbcZo3uY5NSY+Q/pf8uQawdGPwSKWYNTskULe6jO0TU+zvPXWxzP5yQA==")
+from dotenv import load_dotenv
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    # Fallback for build time or testing without envs
+    print("⚠️ Supabase Credentials missing in backend!")
+
+from supabase import create_client, Client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
-# Define OAuth2 scheme for Swagger UI and dependency injection
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# Pydantic Models
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
-async def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+class UserCreate(BaseModel):
+    email: str
+    password: str = ""
+    full_name: str = ""
+    role: str = "prestador"
+
+# Password Hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+# Local Auth Implementation
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-it")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+# Define OAuth2 scheme
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # Verify Supabase JWT
-        # Supabase uses HS256 and the project secret
-        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=[ALGORITHM], options={"verify_act": False})
-        email: str = payload.get("email")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
-    except JWTError as e:
-        print(f"JWT Verification Failed: {e}")
+    except JWTError:
         raise credentials_exception
-
-    # Lookup user in our local database
+    
     user = db.query(User).filter(User.email == email).first()
-
-    # Auto-sync: If user exists in Supabase (valid token) but not here, create them
     if user is None:
-        new_user = User(
-            email=email,
-            full_name=payload.get("user_metadata", {}).get("full_name", email.split('@')[0]),
-            role=payload.get("user_metadata", {}).get("role", "prestador"), # Default role
-            is_active=True,
-            password_hash="supabase_managed" # Placeholder
-        )
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        user = new_user
-
+        raise credentials_exception
     return user
 
 # Rotas
@@ -73,42 +107,19 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-# Legacy Internal Login (Deprecated by Supabase)
-# @router.post("/auth/login")
-# ... removed
-
-@router.post("/register", response_model=Token)
-async def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    hashed_password = get_password_hash(user.password)
-    new_user = User(
-        email=user.email,
-        password_hash=hashed_password,
-        full_name=user.full_name,
-        role=user.role
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    access_token = create_access_token(data={"sub": new_user.email, "role": new_user.role, "id": new_user.id})
-    return {"access_token": access_token, "token_type": "bearer"}
-
 @router.get("/users/me")
 async def read_users_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return {
         "id": current_user.id,
         "email": current_user.email,
-        "full_name": current_user.full_name,
-        "role": current_user.role,
-        "phone": current_user.phone,
+        "nome_completo": current_user.full_name,
+        "cargo": current_user.role,
+        "telefone": current_user.phone,
         "cpf": current_user.cpf,
         "avatar_url": current_user.avatar_url,
         "signature_url": current_user.signature_url,
-        "address": current_user.address_json
+        "is_active": current_user.is_active,
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None
     }
 
 # Aliases for frontend compatibility
@@ -118,7 +129,7 @@ async def auth_me(current_user: User = Depends(get_current_user), db: Session = 
 
 @router.post("/auth/google")
 async def google_login(token: dict):
-    # Mock Google Login for now - aligned with monolithic role structure
+    # Mock Google Login for now
     return {
         "token": "mock_google_token",
         "usuario": {
@@ -133,51 +144,3 @@ async def google_login(token: dict):
 async def google_link(token: dict):
     """Link Google account to existing user"""
     return {"message": "Conta Google vinculada com sucesso"}
-
-@router.post("/auth/setup-admin")
-async def setup_first_admin(user_data: UserCreate, request: Request, db: Session = Depends(get_db)):
-    # 1. Verification: Is there ANY admin?
-    existing_admin = db.query(User).filter(User.role == "admin").first()
-    if existing_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Setup already completed. An admin exists."
-        )
-
-    # 2. Extract Token from Header (Manual verification as this is a hybrid endpoint)
-    # Ideally, we should use Depends(get_current_user) but we want to allow 'unregistered' users in DB to call this?
-    # No, with Supabase, the user IS registered in Auth, just not in DB properly as Admin.
-
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-         raise HTTPException(status_code=401, detail="Missing Authorization Header")
-
-    token = auth_header.split(" ")[1]
-
-    try:
-        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=[ALGORITHM], options={"verify_act": False})
-        token_email = payload.get("email")
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid Token: {str(e)}")
-
-    if token_email != user_data.email:
-        raise HTTPException(status_code=400, detail="Token email does not match provided email")
-
-    # 3. Create/Update Admin in Local DB
-    # Check if user was already auto-created by get_current_user (unlikely if they just signed up and went straight here, but possible)
-    user = db.query(User).filter(User.email == user_data.email).first()
-
-    if user:
-        user.role = "admin" # Promote
-    else:
-        new_admin = User(
-            email=user_data.email,
-            password_hash="supabase_managed",
-            full_name=user_data.full_name,
-            role="admin", # Force Admin
-            is_active=True
-        )
-        db.add(new_admin)
-
-    db.commit()
-    return {"message": "Admin created successfully", "email": user_data.email}

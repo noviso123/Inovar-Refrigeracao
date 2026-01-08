@@ -13,7 +13,17 @@ class SystemSettings(Base):
     cnpj = Column(String, nullable=True)
     email_contact = Column(String, nullable=True)
     phone_contact = Column(String, nullable=True)
-    address = Column(String, nullable=True)
+    phone_contact = Column(String, nullable=True)
+    
+    # Address Data
+    cep = Column(String, nullable=True)
+    logradouro = Column(String, nullable=True)
+    numero = Column(String, nullable=True)
+    complemento = Column(String, nullable=True)
+    bairro = Column(String, nullable=True)
+    cidade = Column(String, nullable=True)
+    estado = Column(String, nullable=True)
+    
     website = Column(String, nullable=True)
     logo_url = Column(String, nullable=True)
 
@@ -37,9 +47,23 @@ class User(Base):
     # Profile Data
     phone = Column(String, nullable=True)
     cpf = Column(String, nullable=True)
+    rg = Column(String, nullable=True)
+    orgao_emissor = Column(String, nullable=True)
+    data_nascimento = Column(String, nullable=True)
+    estado_civil = Column(String, nullable=True)
+    profissao = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
-    signature_url = Column(Text, nullable=True) # Was signature_base64
-    address_json = Column(JSON, nullable=True)
+    signature_url = Column(Text, nullable=True)
+    
+    # Address Data
+    cep = Column(String, nullable=True)
+    logradouro = Column(String, nullable=True)
+    numero = Column(String, nullable=True)
+    complemento = Column(String, nullable=True)
+    bairro = Column(String, nullable=True)
+    cidade = Column(String, nullable=True)
+    estado = Column(String, nullable=True)
+
     automacao = Column(JSON, nullable=True) # { "lembreteManutencao": bool, "intervaloMeses": int, "templateMensagem": str, "whatsappInstanceName": str }
 
     # Relationships
@@ -55,11 +79,48 @@ class Client(Base):
     phone = Column(String, nullable=True)
 
     sequential_id = Column(Integer, nullable=True)
+    maintenance_period = Column(Integer, default=6) # In months
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     locations = relationship("Location", back_populates="client", cascade="all, delete-orphan")
     service_orders = relationship("ServiceOrder", back_populates="client")
+
+    @property
+    def cpf(self):
+        return self.document if self.document and len(self.document) <= 11 else None
+    
+    @property
+    def cnpj(self):
+        return self.document if self.document and len(self.document) > 11 else None
+
+    @property
+    def cep(self):
+        return self.locations[0].zip_code if self.locations else None
+
+    @property
+    def logradouro(self):
+        return self.locations[0].address if self.locations else None
+
+    @property
+    def numero(self):
+        return self.locations[0].street_number if self.locations else None
+
+    @property
+    def complemento(self):
+        return self.locations[0].complement if self.locations else None
+
+    @property
+    def bairro(self):
+        return self.locations[0].neighborhood if self.locations else None
+
+    @property
+    def cidade(self):
+        return self.locations[0].city if self.locations else None
+
+    @property
+    def estado(self):
+        return self.locations[0].state if self.locations else None
 
 class Location(Base):
     __tablename__ = "locations"
@@ -130,9 +191,6 @@ class ServiceOrder(Base):
 
     # Valores
     valor_total = Column(Float, default=0.0)
-
-    # Assinaturas
-    assinatura_cliente = Column(Text, nullable=True)
 
     # Foreign Keys
     user_id = Column(Integer, ForeignKey("users.id"))

@@ -1,7 +1,7 @@
 import requests
 import json
 
-token = "sbp_a0b148ad047f0f58f63b71e8aaa5083824ae0963"
+token = "sbp_b7babfcc5092c1cdbbb857b22daf2f510395ed8f"
 project_ref = "apntpretjodygczbeozk"
 headers = {
     "Authorization": f"Bearer {token}",

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from database import get_db
 from models import Client, Location, User
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from redis_utils import get_cache, set_cache, delete_cache
 import logging
@@ -27,20 +27,33 @@ class LocationBase(BaseModel):
     neighborhood: str
 
 class LocationResponse(LocationBase):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+    
     id: int
     client_id: int
 
-    class Config:
-        from_attributes = True
+from pydantic import BaseModel, Field
 
 class ClientBase(BaseModel):
-    nome: str
+    model_config = ConfigDict(populate_by_name=True)
+    
+    nome: str = Field(..., validation_alias="name")
     email: Optional[str] = None
     cpf: Optional[str] = None
     cnpj: Optional[str] = None
-    telefone: Optional[str] = None
+    telefone: Optional[str] = Field(None, validation_alias="phone")
+    periodo_manutencao: Optional[int] = Field(6, validation_alias="maintenance_period")
 
 class ClientCreate(ClientBase):
+    # Flattened address fields from frontend
+    cep: Optional[str] = None
+    logradouro: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    
     # Initial location is optional but recommended
     primary_location: Optional[LocationBase] = None
 
@@ -50,66 +63,50 @@ class ClientUpdate(BaseModel):
     cpf: Optional[str] = None
     cnpj: Optional[str] = None
     telefone: Optional[str] = None
-    # Support updating the primary location via these fields
+    periodo_manutencao: Optional[int] = None
+    
+    # Address fields
+    cep: Optional[str] = None
+    logradouro: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    
+    # Support legacy fields if any
     address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
     zip_code: Optional[str] = None
     street_number: Optional[str] = None
     neighborhood: Optional[str] = None
-    complement: Optional[str] = None
 
 class ClientResponse(ClientBase):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+    
     id: int
     sequential_id: Optional[int] = None
+    periodo_manutencao: int = 6
+    
+    # Flattened primary location fields
+    cep: Optional[str] = None
+    logradouro: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    
     locations: List[LocationResponse] = []
-
-    class Config:
-        from_attributes = True
 
 # Routes - Clients
 @router.get("/clientes", response_model=List[ClientResponse])
 def list_clients(db: Session = Depends(get_db)):
-    cache_key = "cache:clientes:list:global"
-    cached = get_cache(cache_key)
-    if cached:
-        return cached
-
-    clients = db.query(Client).all()
-
-    # Mapping to response model
-    result = []
-    for c in clients:
-        result.append({
-            "id": c.id,
-            "sequential_id": c.sequential_id,
-            "nome": c.name,
-            "email": c.email,
-            "cpf": c.document if len(c.document or "") <= 14 else None,
-            "cnpj": c.document if len(c.document or "") > 14 else None,
-            "telefone": c.phone,
-            "locations": [
-                {
-                    "id": loc.id,
-                    "client_id": loc.client_id,
-                    "nickname": loc.nickname,
-                    "address": loc.address,
-                    "city": loc.city,
-                    "state": loc.state,
-                    "zip_code": loc.zip_code,
-                    "street_number": loc.street_number,
-                    "complement": loc.complement,
-                    "neighborhood": loc.neighborhood
-                }
-                for loc in c.locations
-            ]
-        })
-
-    set_cache(cache_key, result, ttl_seconds=120)
-    return result
+    clients = db.query(Client).options(joinedload(Client.locations)).all()
+    return clients
 
 @router.post("/clientes", response_model=ClientResponse)
 def create_client(client: ClientCreate, db: Session = Depends(get_db)):
+    print(f"Creating client: {client}")
     document = None
     if client.cpf:
         document = validate_cpf(client.cpf)
@@ -130,7 +127,8 @@ def create_client(client: ClientCreate, db: Session = Depends(get_db)):
         email=client.email,
         document=document,
         phone=client.telefone,
-        sequential_id=sequential_id
+        sequential_id=sequential_id,
+        maintenance_period=client.periodo_manutencao or 6
     )
     db.add(db_client)
     db.flush() # Get ID for location
@@ -141,11 +139,25 @@ def create_client(client: ClientCreate, db: Session = Depends(get_db)):
             **client.primary_location.dict()
         )
         db.add(db_location)
+    elif any([client.cep, client.logradouro, client.numero, client.cidade, client.estado]):
+        db_location = Location(
+            client_id=db_client.id,
+            nickname="Sede",
+            address=client.logradouro or "",
+            city=client.cidade or "",
+            state=client.estado or "",
+            zip_code=client.cep or "",
+            street_number=client.numero or "",
+            complement=client.complemento,
+            neighborhood=client.bairro or ""
+        )
+        db.add(db_location)
 
     db.commit()
     db.refresh(db_client)
 
     delete_cache("clientes")
+    
     return db_client
 
 @router.get("/clientes/{client_id}", response_model=ClientResponse)
@@ -164,6 +176,7 @@ def update_client(client_id: int, client: ClientUpdate, db: Session = Depends(ge
     if client.nome is not None: db_client.name = client.nome
     if client.email is not None: db_client.email = client.email
     if client.telefone is not None: db_client.phone = client.telefone
+    if client.periodo_manutencao is not None: db_client.maintenance_period = client.periodo_manutencao
 
     if client.cpf:
         db_client.document = validate_cpf(client.cpf)
@@ -171,16 +184,40 @@ def update_client(client_id: int, client: ClientUpdate, db: Session = Depends(ge
         db_client.document = validate_cnpj(client.cnpj)
 
     # Update primary location if address fields are provided
-    if any([client.address, client.city, client.state, client.zip_code, client.street_number, client.neighborhood]):
+    address_fields = {
+        "address": client.logradouro or client.address,
+        "city": client.cidade,
+        "state": client.estado,
+        "zip_code": client.cep or client.zip_code,
+        "street_number": client.numero or client.street_number,
+        "neighborhood": client.bairro or client.neighborhood,
+        "complement": client.complemento
+    }
+    
+    if any(address_fields.values()):
         primary_loc = db.query(Location).filter(Location.client_id == client_id).order_by(Location.id.asc()).first()
         if primary_loc:
-            if client.address: primary_loc.address = client.address
-            if client.city: primary_loc.city = client.city
-            if client.state: primary_loc.state = client.state
-            if client.zip_code: primary_loc.zip_code = client.zip_code
-            if client.street_number: primary_loc.street_number = client.street_number
-            if client.neighborhood: primary_loc.neighborhood = client.neighborhood
-            if client.complement: primary_loc.complement = client.complement
+            if address_fields["address"]: primary_loc.address = address_fields["address"]
+            if address_fields["city"]: primary_loc.city = address_fields["city"]
+            if address_fields["state"]: primary_loc.state = address_fields["state"]
+            if address_fields["zip_code"]: primary_loc.zip_code = address_fields["zip_code"]
+            if address_fields["street_number"]: primary_loc.street_number = address_fields["street_number"]
+            if address_fields["neighborhood"]: primary_loc.neighborhood = address_fields["neighborhood"]
+            if address_fields["complement"]: primary_loc.complement = address_fields["complement"]
+        else:
+            # Create primary location if it doesn't exist
+            new_loc = Location(
+                client_id=client_id,
+                nickname="Sede",
+                address=address_fields["address"] or "",
+                city=address_fields["city"] or "",
+                state=address_fields["state"] or "",
+                zip_code=address_fields["zip_code"] or "",
+                street_number=address_fields["street_number"] or "",
+                neighborhood=address_fields["neighborhood"] or "",
+                complement=address_fields["complement"]
+            )
+            db.add(new_loc)
 
     db.commit()
     db.refresh(db_client)

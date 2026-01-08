@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from database import get_db
 from models import ServiceOrder, ItemOS, User, Client, Location, Equipment
@@ -16,22 +16,26 @@ router = APIRouter()
 from auth import get_current_user
 
 # Schemas
+from pydantic import BaseModel, Field, ConfigDict
+
 class ItemOSSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     descricao: str = Field(..., alias="descricao_tarefa")
     quantidade: float = 1.0
     valor_unitario: float = 0.0
     status: str = Field("pendente", alias="status_item")
 
 class ServiceOrderBase(BaseModel):
-    titulo: str
+    model_config = ConfigDict(populate_by_name=True)
+    titulo: str = Field(..., validation_alias="title")
     status: str = "aberto"
     priority: str = "media"
     service_type: str = "corretiva"
     description: Optional[str] = None
-    cliente_id: int
-    local_id: Optional[int] = None
+    cliente_id: int = Field(..., validation_alias="client_id")
+    local_id: Optional[int] = Field(None, validation_alias="location_id")
     equipment_id: Optional[int] = None
-    agendado_para: Optional[str] = Field(None, alias="scheduled_at")
+    agendado_para: Optional[str] = Field(None, validation_alias="scheduled_at")
 
 class ServiceOrderCreate(ServiceOrderBase):
     itens: List[ItemOSSchema] = []
@@ -41,14 +45,22 @@ class ServiceOrderResponse(ServiceOrderBase):
     sequential_id: int
     created_at: datetime
     valor_total: float
+    client_name: Optional[str] = None
+    location_name: Optional[str] = None
+    technician_name: Optional[str] = None
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 # Routes
 @router.get("/solicitacoes", response_model=List[ServiceOrderResponse])
 def list_orders(db: Session = Depends(get_db)):
-    orders = db.query(ServiceOrder).all()
+    orders = db.query(ServiceOrder).options(
+        joinedload(ServiceOrder.client),
+        joinedload(ServiceOrder.location),
+        joinedload(ServiceOrder.tecnico)
+    ).all()
     # Manual mapping for response to match keys in ServiceOrderResponse
     return [
         {
@@ -64,7 +76,10 @@ def list_orders(db: Session = Depends(get_db)):
             "equipment_id": o.equipment_id,
             "scheduled_at": o.scheduled_at.isoformat() if o.scheduled_at else None,
             "created_at": o.created_at,
-            "valor_total": o.valor_total
+            "valor_total": o.valor_total,
+            "client_name": o.client.name if o.client else None,
+            "location_name": o.location.nickname if o.location else None,
+            "technician_name": o.tecnico.full_name if o.tecnico else None
         }
         for o in orders
     ]
@@ -133,11 +148,15 @@ def create_order(order: ServiceOrderCreate, current_user: User = Depends(get_cur
 
 @router.get("/solicitacoes/{order_id}")
 def get_order(order_id: int, db: Session = Depends(get_db)):
+    from models import SystemSettings
     order = db.query(ServiceOrder).filter(ServiceOrder.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="OS não encontrada")
 
+    settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
+
     # Rich response with all fields for DetalhesSolicitacao.tsx
+    # Rich response with all fields for DetalhesSolicitacao.tsx and Documents
     return {
         "id": order.id,
         "sequential_id": order.sequential_id,
@@ -153,24 +172,40 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
         "valor_total": order.valor_total,
         "client_signature": order.assinatura_cliente,
         "tech_signature": order.assinatura_tecnico,
+        "tecnico": {
+            "id": order.user.id,
+            "nome": order.user.full_name,
+            "email": order.user.email,
+            "telefone": order.user.phone,
+            "cpf": order.user.cpf
+        } if order.user else None,
         "cliente": {
             "id": order.client.id,
             "nome": order.client.name,
             "telefone": order.client.phone,
-            "email": order.client.email
+            "email": order.client.email,
+            "documento": order.client.document # CPF or CNPJ
         },
         "local": {
             "id": order.location.id,
             "nickname": order.location.nickname,
             "address": order.location.address,
             "city": order.location.city,
-            "state": order.location.state
+            "state": order.location.state,
+            "cep": order.location.zip_code,
+            "logradouro": order.location.address, # Assuming address field holds logradouro
+            "numero": order.location.street_number,
+            "complemento": order.location.complement,
+            "bairro": order.location.neighborhood
         } if order.location else None,
         "equipamento": {
             "id": order.equipment.id,
             "nome": order.equipment.name,
             "marca": order.equipment.brand,
-            "modelo": order.equipment.model
+            "modelo": order.equipment.model,
+            "numero_serie": order.equipment.serial_number,
+            "tipo": order.equipment.equipment_type,
+            "data_instalacao": order.equipment.installation_date.isoformat() if order.equipment.installation_date else None
         } if order.equipment else None,
         "itens": [
             {
@@ -192,5 +227,20 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
             for f in (order.fotos_os if order.fotos_os and isinstance(order.fotos_os, list) else [])
         ],
         "historico": order.historico_json if order.historico_json else [],
-        "nfse": order.nfse_json
+        "nfse": order.nfse_json,
+        "empresa": {
+            "nome_fantasia": settings.business_name if settings else "Inovar Refrigeração",
+            "cnpj": settings.cnpj if settings else None,
+            "email": settings.email_contact if settings else None,
+            "telefone": settings.phone_contact if settings else None,
+            "endereco": {
+                "cep": settings.cep,
+                "logradouro": settings.logradouro,
+                "numero": settings.numero,
+                "complemento": settings.complemento,
+                "bairro": settings.bairro,
+                "cidade": settings.cidade,
+                "estado": settings.estado
+            } if settings and (settings.cep or settings.logradouro) else None
+        }
     }

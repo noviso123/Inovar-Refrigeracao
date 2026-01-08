@@ -45,7 +45,8 @@ def get_admin_dashboard(db: Session = Depends(get_db)):
             "id": os.id,
             "sequential_id": os.sequential_id,
             "titulo": os.title or f"OS #{os.sequential_id}",
-            "status": os.status
+            "status": os.status,
+            "client_name": os.client.name if os.client else None
         })
 
     result = {
@@ -88,7 +89,8 @@ def get_prestador_dashboard(current_user: User = Depends(get_current_user), db: 
             "id": os.id,
             "sequential_id": os.sequential_id,
             "titulo": os.title or f"OS #{os.sequential_id}",
-            "status": os.status
+            "status": os.status,
+            "client_name": os.client.name if os.client else None
         })
 
     result = {
