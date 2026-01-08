@@ -138,15 +138,35 @@ class WhatsappBrain:
                 if msg:
                     logger.info(f"⚡ Processing Message ID: {msg['id']} to {msg['numero']}")
 
-                    # 3. Simulate Human Typing
-                    typing_delay = random.randint(3, 8)
-                    await asyncio.sleep(typing_delay)
-
-                    # 4. Send Message
+                    # 3. Advanced Human-Like Sending
                     try:
-                        self.send_message_neonize(msg['numero'], msg['mensagem'], msg.get('media_url'))
+                        text_body = msg['mensagem']
+                        # Fragmentar se for muito longo (ex: > 300 chars)
+                        parts = [text_body] if len(text_body) < 250 else [p.strip() for p in text_body.split("\n\n") if p.strip()]
+
+                        for i, part in enumerate(parts):
+                            # Simular Digitando (Human-like: ~10 chars por segundo + atraso base)
+                            typing_delay = random.randint(3, 7) + (len(part) // 50)
+                            logger.info(f"🤖 Bot ‘simulating typing’ for {typing_delay}s for part {i+1}/{len(parts)}")
+
+                            # Simular estado de composição no WhatsApp se possível
+                            if NEONIZE_AVAILABLE and self.client:
+                                try:
+                                    jid = self.client.build_jid(msg['numero'])
+                                    # self.client.send_presence(jid, Presence.COMPOSING) # Future implementation
+                                except: pass
+
+                            await asyncio.sleep(typing_delay)
+
+                            self.send_message_neonize(msg['numero'], part, msg.get('media_url') if i == 0 else None)
+
+                            if len(parts) > 1 and i < len(parts) - 1:
+                                segment_delay = random.randint(2, 5)
+                                logger.info(f"⏳ Pause between message bubbles: {segment_delay}s")
+                                await asyncio.sleep(segment_delay)
+
                         self.update_message_status(msg['id'], 'enviado')
-                        logger.info(f"✅ Message {msg['id']} Sent!")
+                        logger.info(f"✅ Message {msg['id']} Sent in {len(parts)} parts.")
                     except Exception as e:
                         logger.error(f"❌ Failed to send {msg['id']}: {e}")
                         self.update_message_status(msg['id'], 'erro', str(e))

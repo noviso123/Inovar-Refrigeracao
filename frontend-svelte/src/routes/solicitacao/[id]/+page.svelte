@@ -31,6 +31,7 @@
         Download,
         Share2,
         Building,
+        MessageSquare,
     } from "lucide-svelte";
     import ServiceCompletionWizard from "$lib/components/ServiceCompletionWizard.svelte";
     import { user } from "$lib/auth";
@@ -259,6 +260,32 @@
 
     $: itemsTotal = editItems.reduce((sum, i) => sum + i.valor_total, 0);
 
+    async function sendViaWhatsApp(type: 'pdf' | 'pix') {
+        updating = true;
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`/api/solicitacoes/${osId}/send-whatsapp?type=${type}`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                alert(`Solicitação de envio de ${type.toUpperCase()} enfileirada!`);
+            } else {
+                const err = await res.json();
+                alert(`Erro: ${err.detail || 'Falha ao enfileirar'}`);
+            }
+        } catch (error) {
+            console.error("Erro ao enviar WhatsApp:", error);
+        } finally {
+            updating = false;
+        }
+    }
+
+    function downloadPDF() {
+        const token = localStorage.getItem("token");
+        window.open(`/api/solicitacoes/${osId}/pdf?token=${token}`, "_blank");
+    }
+
     onMount(() => {
         fetchOS();
     });
@@ -364,15 +391,26 @@
                     <div class="flex gap-3 w-full md:w-auto">
                         <Button
                             variant="secondary"
-                            className="flex-1 md:flex-none"
+                            className="flex-1 md:flex-none border-surface-200"
+                            on:click={downloadPDF}
                         >
                             <Download class="w-4 h-4 mr-2" /> PDF
                         </Button>
                         <Button
                             variant="secondary"
-                            className="flex-1 md:flex-none"
+                            className="flex-1 md:flex-none bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 transition-all active:scale-95"
+                            on:click={() => sendViaWhatsApp('pdf')}
+                            loading={updating}
                         >
-                            <Share2 class="w-4 h-4 mr-2" /> Compartilhar
+                            <MessageSquare class="w-4 h-4 mr-2" /> Enviar OS
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            className="flex-1 md:flex-none bg-brand-50 text-brand-700 hover:bg-brand-100 border-brand-200 transition-all active:scale-95"
+                            on:click={() => sendViaWhatsApp('pix')}
+                            loading={updating}
+                        >
+                            <DollarSign class="w-4 h-4 mr-2" /> Enviar PIX
                         </Button>
                     </div>
                 </div>

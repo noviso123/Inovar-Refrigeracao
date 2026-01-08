@@ -50,7 +50,7 @@ def get_config(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/config")
+@router.put("/config")
 def update_config(config: ConfigUpdate, db: Session = Depends(get_db)):
     """Updates the Anti-Ban configuration in DB."""
     updates = []
@@ -87,7 +87,11 @@ def update_config(config: ConfigUpdate, db: Session = Depends(get_db)):
 @router.post("/reconnect")
 def reconnect():
     """Forces a reconnection logic."""
-    # Since Brain runs in a loop, we can perhaps toggle active state or restart client?
+    try:
+        brain.restart()
+        return {"message": "Reconnection triggered"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 class MessageSend(BaseModel):
     number: str

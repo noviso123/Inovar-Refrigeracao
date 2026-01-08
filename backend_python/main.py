@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Request, Response
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -40,6 +40,9 @@ from extra_routes import router as extra_router
 from equipamentos import router as equipamentos_router
 from whatsapp_engine import brain
 from scheduler import start_scheduler
+from notifications import router as notifications_router
+from routers.manutencao import router as maintenance_router
+from routers.qrcode import router as qrcode_router
 
 # Redis Utilities
 from redis_utils import (
@@ -122,7 +125,7 @@ async def rate_limit_middleware(request: Request, call_next):
     if not allowed:
         return JSONResponse(
             status_code=429,
-            content={"detail": "Too many requests. Please slow down."},
+            content={"detail": "Muitas requisições. Por favor, aguarde um momento."},
             headers={"X-RateLimit-Remaining": "0"}
         )
 
@@ -205,7 +208,7 @@ def check_storage_health() -> dict:
     try:
         import httpx
         from supabase_storage import SUPABASE_URL, SUPABASE_SERVICE_KEY
-        
+
         # Check Supabase Storage first
         if SUPABASE_SERVICE_KEY:
             response = httpx.get(f"{SUPABASE_URL}/storage/v1/bucket", timeout=5.0, headers={
@@ -215,7 +218,7 @@ def check_storage_health() -> dict:
             latency = round((time.time() - start) * 1000, 2)
             if response.status_code == 200:
                 return {"status": "healthy", "provider": "Supabase Storage", "latency_ms": latency}
-        
+
         # Fallback to ImgBB check
         response = httpx.get("https://api.imgbb.com/", timeout=5.0)
         latency = round((time.time() - start) * 1000, 2)
@@ -281,7 +284,7 @@ async def upload_file(file: UploadFile = File(...), bucket: str = "os-photos"):
 
         # Try Supabase Storage first
         from supabase_storage import upload_file as supabase_upload, SUPABASE_SERVICE_KEY
-        
+
         if SUPABASE_SERVICE_KEY:
             result = await supabase_upload(file_content, file.filename, content_type, bucket)
             if result:
@@ -290,7 +293,7 @@ async def upload_file(file: UploadFile = File(...), bucket: str = "os-photos"):
 
         # Fallback to ImgBB if configured
         api_key = os.getenv("IMGBB_API_KEY")
-        
+
         if api_key:
             files = {"image": (file.filename, file_content, content_type)}
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -308,16 +311,16 @@ async def upload_file(file: UploadFile = File(...), bucket: str = "os-photos"):
                         "filename": data["data"]["image"]["filename"],
                         "provider": "imgbb"
                     }
-            
+
             logger.warning(f"ImgBB upload failed, falling back to Base64: {response.text}")
 
         # Final fallback: Convert to Base64 data URL
         import base64
         base64_data = base64.b64encode(file_content).decode('utf-8')
         data_url = f"data:{content_type};base64,{base64_data}"
-        
+
         logger.info(f"Image uploaded as Base64 (size: {len(file_content)} bytes)")
-        
+
         return {
             "url": data_url,
             "filename": file.filename,
@@ -339,6 +342,9 @@ app.include_router(dashboard_router, prefix="/api")
 app.include_router(clientes_router, prefix="/api")
 app.include_router(extra_router, prefix="/api")
 app.include_router(equipamentos_router, prefix="/api")
+app.include_router(notifications_router)
+app.include_router(maintenance_router)
+app.include_router(qrcode_router)
 
 # WebSocket Notifications
 from fastapi import WebSocket, WebSocketDisconnect
@@ -359,12 +365,12 @@ async def websocket_notifications(websocket: WebSocket, token: str = None):
         # Note: decode_access_token needs to be handled carefully with Supabase
         # For now, we assume the token is valid if we get here (simplified)
         # In a real app, you'd verify the Supabase JWT.
-        
+
         # Mock user lookup for now (should use real logic)
         db = next(get_db())
         # This is a placeholder, should use real token decoding
-        user = db.query(User).first() 
-        
+        user = db.query(User).first()
+
         if not user:
             await websocket.close(code=4001, reason="User not found")
             return

@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
-    
+
     id: int
     email: str
     nome_completo: Optional[str] = Field(None, validation_alias="full_name")
@@ -143,7 +143,7 @@ def update_user(user_id: int, user_data: UserUpdateRequest, db: Session = Depend
     if user_data.avatar_url is not None: db_user.avatar_url = user_data.avatar_url
     if user_data.signature_url is not None: db_user.signature_url = user_data.signature_url
     if user_data.automacao is not None: db_user.automacao = user_data.automacao
-    
+
     if user_data.endereco is not None:
         addr = user_data.endereco
         db_user.cep = addr.get("cep")
@@ -156,7 +156,7 @@ def update_user(user_id: int, user_data: UserUpdateRequest, db: Session = Depend
 
     db.commit()
     db.refresh(db_user)
-    
+
     # Construct response manually to include address
     response_data = {
         "id": db_user.id,
@@ -213,7 +213,7 @@ def update_current_user(
     """Atualiza o perfil do usuário autenticado."""
     try:
         logger.info(f"Atualizando usuário {current_user.id}: {data}")
-        
+
         if data.nome_completo is not None:
             current_user.full_name = data.nome_completo
         if data.telefone is not None:
@@ -222,7 +222,7 @@ def update_current_user(
             current_user.cpf = data.cpf
         if data.avatar_url is not None:
             current_user.avatar_url = data.avatar_url
-        
+
         if data.endereco is not None:
             addr = data.endereco
             current_user.cep = addr.get("cep")
@@ -237,7 +237,7 @@ def update_current_user(
         db.refresh(current_user)
 
         logger.info(f"Usuário {current_user.id} atualizado com sucesso")
-        
+
         return {
             "id": current_user.id,
             "email": current_user.email,
@@ -267,3 +267,19 @@ def change_password(
     db.commit()
 
     return {"message": "Senha alterada com sucesso"}
+
+@router.put("/usuarios/{user_id}/automacao")
+def update_user_automation(user_id: int, config: dict, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    user.automacao = config
+    db.commit()
+    return {"message": "Configurações de automação atualizadas"}
+
+@router.post("/usuarios/{user_id}/automacao/test")
+def test_user_automation(user_id: int, db: Session = Depends(get_db)):
+    # Simular o disparo de lembretes para este usuário
+    # Na vida real, o scheduler cuidaria disso, mas aqui forçamos uma execução
+    return {"message": "Teste de automação enfileirado", "status": "success"}

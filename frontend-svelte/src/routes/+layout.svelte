@@ -2,6 +2,8 @@
   import "../app.css";
   import { onMount } from "svelte";
   import { initAuth, user, isAuthenticated, logout } from "$lib/auth";
+  import { unreadCount } from "$lib/notifications";
+  import NotificationsPanel from "$lib/components/NotificationsPanel.svelte";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { userModal } from "$lib/modalStore";
@@ -21,6 +23,10 @@
     Loader2,
     Lock,
     Users,
+    Wallet,
+    QrCode,
+    LifeBuoy,
+    BellRing
   } from "lucide-svelte";
 
   let isMobileMenuOpen = false;
@@ -47,34 +53,21 @@
     $user?.cargo === "admin"
       ? [
           { id: "/", label: "Painel", icon: Home, section: "geral" },
-          {
-            id: "/usuarios",
-            label: "Usuários",
-            icon: UserIcon,
-            section: "gestao",
-          },
-          {
-            id: "/configuracoes",
-            label: "Gestão do Sistema",
-            icon: Settings,
-            section: "gestao",
-          },
+          { id: "/solicitacoes", label: "Solicitações", icon: Briefcase, section: "geral" },
+          { id: "/whatsapp", label: "WhatsApp", icon: MessageCircle, section: "geral" },
+          { id: "/financeiro", label: "Financeiro", icon: Wallet, section: "geral" },
+          { id: "/usuarios", label: "Usuários", icon: UserIcon, section: "gestao" },
+          { id: "/qrcodes", label: "QR Codes", icon: QrCode, section: "gestao" },
+          { id: "/configuracoes", label: "Gestão do Sistema", icon: Settings, section: "gestao" },
+          { id: "/suporte", label: "Suporte", icon: LifeBuoy, section: "conta" },
         ]
       : [
           { id: "/", label: "Painel", icon: Home, section: "geral" },
-          {
-            id: "/solicitacoes",
-            label: "Serviços",
-            icon: Briefcase,
-            section: "gestao",
-          },
-          { id: "/agenda", label: "Agenda", icon: Calendar, section: "gestao" },
-          {
-            id: "/configuracoes",
-            label: "Configurações",
-            icon: Settings,
-            section: "conta",
-          },
+          { id: "/solicitacoes", label: "Meus Serviços", icon: Briefcase, section: "geral" },
+          { id: "/agenda", label: "Minha Agenda", icon: Calendar, section: "geral" },
+          { id: "/whatsapp", label: "WhatsApp", icon: MessageCircle, section: "geral" },
+          { id: "/configuracoes", label: "Minha Conta", icon: Settings, section: "conta" },
+          { id: "/suporte", label: "Suporte", icon: LifeBuoy, section: "conta" },
         ];
 
   $: sections = {
@@ -233,11 +226,12 @@
         </button>
 
         <div class="flex flex-col items-center">
-          <span class="font-bold text-base text-surface-900 leading-none"
-            >Inovar</span
-          >
+          <div class="flex items-center gap-2">
+            <img src="/logo.png" alt="Logo" class="w-6 h-6 object-contain" />
+            <span class="font-bold text-base text-surface-900 leading-none">Inovar</span>
+          </div>
           <span
-            class="text-[8px] font-bold text-brand-600 uppercase tracking-widest"
+            class="text-[8px] font-bold text-brand-600 uppercase tracking-[0.2em] mt-0.5"
             >Refrigeração</span
           >
         </div>
@@ -247,10 +241,14 @@
           class="p-2 rounded-xl hover:bg-surface-100 transition-colors relative active:scale-90"
         >
           <Bell class="w-6 h-6 text-surface-700" />
-          <span
-            class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"
-          ></span>
+          {#if $unreadCount > 0}
+            <span
+              class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"
+            ></span>
+          {/if}
         </button>
+
+        <NotificationsPanel isOpen={showNotifications} onClose={() => showNotifications = false} />
       </header>
 
       <!-- ===== MAIN CONTENT ===== -->
@@ -307,12 +305,12 @@
       >
         <div class="flex items-center gap-3">
           <div
-            class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-100"
+            class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-brand-100 border border-surface-50 p-1.5"
           >
             <img
               src="/logo.png"
               alt="Logo"
-              class="w-6 h-6 object-contain brightness-0 invert"
+              class="w-full h-full object-contain"
             />
           </div>
           <span class="font-bold text-xl tracking-tight">Menu</span>

@@ -1,4 +1,10 @@
 import { writable, derived, type Writable } from 'svelte/store';
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://apntpretjodygczbeozk.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_1lPwrqXB373GKcILWHyukA_voiQCgyO';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Tipos
 export interface Usuario {
@@ -14,87 +20,76 @@ export interface Usuario {
     created_at: string;
 }
 
-// Store do usuário logado
+// Stores
 export const user: Writable<Usuario | null> = writable(null);
-
-// Store do token
 export const token: Writable<string | null> = writable(null);
-
-// Derivado: está autenticado?
 export const isAuthenticated = derived(user, ($user) => $user !== null);
-
-// Derivado: é admin?
 export const isAdmin = derived(user, ($user) => $user?.cargo === 'admin');
 
-// Inicializar a partir do localStorage (client-side)
-export function initAuth() {
+// Inicializar
+export async function initAuth() {
     if (typeof window === 'undefined') return;
 
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
+    const { data: { session } } = await supabase.auth.getSession();
 
-    if (storedUser) {
-        try {
-            user.set(JSON.parse(storedUser));
-        } catch {
-            localStorage.removeItem('user');
-        }
+    if (session) {
+        token.set(session.access_token);
+        localStorage.setItem('token', session.access_token);
+
+        // Buscar perfil do backend (que agora verifica o JWT do Supabase)
+        await fetchProfile(session.access_token);
     }
 
-    if (storedToken) {
-        token.set(storedToken);
+    // Escutar mudanças no estado de auth
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session) {
+            token.set(session.access_token);
+            localStorage.setItem('token', session.access_token);
+            await fetchProfile(session.access_token);
+        } else {
+            user.set(null);
+            token.set(null);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+        }
+    });
+}
+
+async function fetchProfile(accessToken: string) {
+    try {
+        const response = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (response.ok) {
+            const userData = await response.json();
+            user.set(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
+        } else {
+            console.error("Erro ao buscar perfil");
+        }
+    } catch (e) {
+        console.error("Erro na requisição de perfil", e);
     }
 }
 
 // Login
-export async function login(email: string, password: string): Promise<Usuario> {
-    const formData = new URLSearchParams();
-    formData.append('username', email);
-    formData.append('password', password);
-
-    const response = await fetch('/api/token', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData
+export async function login(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
     });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Falha no login");
-    }
-
-    const data = await response.json();
-    const accessToken = data.access_token;
-
-    localStorage.setItem('token', accessToken);
-    token.set(accessToken);
-
-    // Buscar perfil do backend
-    const profileResponse = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-
-    if (!profileResponse.ok) {
-        logout();
-        throw new Error("Erro ao buscar perfil do usuário.");
-    }
-
-    const userData: Usuario = await profileResponse.json();
-    localStorage.setItem('user', JSON.stringify(userData));
-    user.set(userData);
-
-    return userData;
+    if (error) throw error;
+    return data.user;
 }
 
 // Logout
 export async function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    await supabase.auth.signOut();
     user.set(null);
     token.set(null);
-
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     if (typeof window !== 'undefined') {
         window.location.href = '/login';
     }

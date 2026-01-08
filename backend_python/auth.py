@@ -73,19 +73,25 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Não foi possível validar as credenciais",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        # Verificar o token com o Supabase
+        res = supabase.auth.get_user(token)
+        if not res or not res.user:
             raise credentials_exception
-    except JWTError:
+
+        email = res.user.email
+    except Exception as e:
+        logger.error(f"Erro ao verificar token no Supabase: {e}")
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.email == email).first()
     if user is None:
+        # Opcional: Criar usuário localmente se não existir mas estiver no Supabase
+        # Para este sistema, assumimos que o admin já criou o usuário no banco local
         raise credentials_exception
     return user
 
@@ -96,7 +102,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="E-mail ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -124,8 +130,28 @@ async def read_users_me(current_user: User = Depends(get_current_user), db: Sess
 
 # Aliases for frontend compatibility
 @router.get("/auth/me")
-async def auth_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return await read_users_me(current_user, db)
+async def auth_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "nome_completo": current_user.full_name,
+        "cargo": current_user.role,
+        "telefone": current_user.phone,
+        "cpf": current_user.cpf,
+        "avatar_url": current_user.avatar_url,
+        "signature_url": current_user.signature_url,
+        "is_active": current_user.is_active,
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        "endereco": {
+            "cep": current_user.cep,
+            "logradouro": current_user.logradouro,
+            "numero": current_user.numero,
+            "complemento": current_user.complemento,
+            "bairro": current_user.bairro,
+            "cidade": current_user.cidade,
+            "estado": current_user.estado
+        } if current_user.cep or current_user.logradouro else None
+    }
 
 @router.post("/auth/google")
 async def google_login(token: dict):

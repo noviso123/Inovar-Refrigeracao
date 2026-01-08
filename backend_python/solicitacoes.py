@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from database import get_db
-from models import ServiceOrder, ItemOS, User, Client, Location, Equipment
+from models import ServiceOrder, ItemOS, User, Client, Location, Equipment, FilaEnvio
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 from auth import get_current_user
+from pix_utils import generate_pix_payload
+from pdf_utils import generate_os_pdf
+from fastapi.responses import Response
 
 # Schemas
 from pydantic import BaseModel, Field, ConfigDict
@@ -62,6 +65,35 @@ def list_orders(db: Session = Depends(get_db)):
         joinedload(ServiceOrder.tecnico)
     ).all()
     # Manual mapping for response to match keys in ServiceOrderResponse
+    return [
+        {
+            "id": o.id,
+            "sequential_id": o.sequential_id,
+            "titulo": o.title,
+            "status": o.status,
+            "priority": o.priority,
+            "service_type": o.service_type,
+            "description": o.description,
+            "cliente_id": o.client_id,
+            "local_id": o.location_id,
+            "equipment_id": o.equipment_id,
+            "scheduled_at": o.scheduled_at.isoformat() if o.scheduled_at else None,
+            "created_at": o.created_at,
+            "valor_total": o.valor_total,
+            "client_name": o.client.name if o.client else None,
+            "location_name": o.location.nickname if o.location else None,
+            "technician_name": o.tecnico.full_name if o.tecnico else None
+        }
+        for o in orders
+    ]
+
+@router.get("/meus-servicos", response_model=List[ServiceOrderResponse])
+def list_my_orders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    orders = db.query(ServiceOrder).filter(ServiceOrder.user_id == current_user.id).options(
+        joinedload(ServiceOrder.client),
+        joinedload(ServiceOrder.location),
+        joinedload(ServiceOrder.tecnico)
+    ).all()
     return [
         {
             "id": o.id,
@@ -244,3 +276,100 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
             } if settings and (settings.cep or settings.logradouro) else None
         }
     }
+
+@router.get("/solicitacoes/{order_id}/pdf")
+def get_order_pdf(order_id: int, db: Session = Depends(get_db)):
+    from models import SystemSettings
+    order_data = get_order(order_id, db)
+    settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
+
+    settings_dict = {
+        "business_name": settings.business_name if settings else "Inovar Refrigeração",
+        "email_contact": settings.email_contact if settings else "",
+        "phone_contact": settings.phone_contact if settings else "",
+        "logradouro": settings.logradouro if settings else "",
+        "numero": settings.numero if settings else "",
+        "cidade": settings.cidade if settings else "",
+        "estado": settings.estado if settings else ""
+    }
+
+    pdf_content = generate_os_pdf(order_data, settings_dict)
+    if not pdf_content:
+        raise HTTPException(status_code=500, detail="Erro ao gerar PDF")
+
+    filename = f"OS_{order_data.get('sequential_id')}.pdf"
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@router.get("/solicitacoes/{order_id}/pix")
+def get_order_pix(order_id: int, db: Session = Depends(get_db)):
+    from models import SystemSettings
+    order = db.query(ServiceOrder).filter(ServiceOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+
+    settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
+    if not settings or not settings.pix_key:
+        raise HTTPException(status_code=400, detail="Chave PIX não configurada na empresa")
+
+    pix_payload = generate_pix_payload(
+        chave_pix=settings.pix_key,
+        valor=order.valor_total,
+        nome_recebedor=settings.business_name,
+        cidade_recebedor=settings.cidade or "SAO PAULO",
+        txt_id=f"OS{order.sequential_id}"
+    )
+
+    if not pix_payload:
+        raise HTTPException(status_code=500, detail="Erro ao gerar payload PIX")
+
+    return {"pix_payload": pix_payload}
+
+@router.post("/solicitacoes/{order_id}/send-whatsapp")
+def send_order_whatsapp(order_id: int, type: str = "pdf", db: Session = Depends(get_db)):
+    from models import SystemSettings
+    order = db.query(ServiceOrder).filter(ServiceOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+
+    settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
+    if not order.client.phone:
+        raise HTTPException(status_code=400, detail="Cliente não possui telefone cadastrado")
+
+    # Limpar número de telefone
+    phone = "".join(filter(str.isdigit, order.client.phone))
+    if not phone.startswith("55"): phone = f"55{phone}"
+
+    if type == "pdf":
+        msg = f"*Olá {order.client.name}!* Segue em anexo a sua Ordem de Serviço #{order.sequential_id}.\n\nPara qualquer dúvida, estamos à disposição."
+        # Por agora, enviamos apenas o texto. No futuro, upload para S3/Supabase e enviar media_url.
+        media_url = None
+    elif type == "pix":
+        if not settings or not settings.pix_key:
+             raise HTTPException(status_code=400, detail="Chave PIX não configurada")
+
+        pix_payload = generate_pix_payload(
+            chave_pix=settings.pix_key,
+            valor=order.valor_total,
+            nome_recebedor=settings.business_name,
+            cidade_recebedor=settings.cidade or "SAO PAULO",
+            txt_id=f"OS{order.sequential_id}"
+        )
+        msg = f"*Olá {order.client.name}!* Segue o código PIX para pagamento da OS #{order.sequential_id}:\n\n`{pix_payload}`\n\n*Valor:* R$ {order.valor_total:.2f}"
+        media_url = None
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de documento inválido")
+
+    # Enfileirar
+    new_msg = FilaEnvio(
+        numero=phone,
+        mensagem=msg,
+        media_url=media_url
+    )
+    db.add(new_msg)
+    db.commit()
+
+    return {"message": f"Mensagem de {type} enfileirada para envio via WhatsApp"}

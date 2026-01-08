@@ -33,3 +33,22 @@ def get_db():
 def init_db():
     from models import Base
     Base.metadata.create_all(bind=engine)
+
+    # Inserir SystemSettings padrão se não existir
+    from sqlalchemy import text
+    db = next(get_db())
+    try:
+        from models import SystemSettings
+        if not db.query(SystemSettings).filter(SystemSettings.id == 1).first():
+            settings = SystemSettings(
+                id=1,
+                business_name="Inovar Refrigeração",
+                logo_url="/logo.png"
+            )
+            db.add(settings)
+            db.commit()
+            print("SystemSettings padrão criado com logo.")
+    except Exception as e:
+        print(f"Erro ao inicializar settings: {e}")
+    finally:
+        db.close()

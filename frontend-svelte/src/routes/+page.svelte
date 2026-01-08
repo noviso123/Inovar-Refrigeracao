@@ -108,14 +108,15 @@
       {/each}
     {:else if $isAdmin}
       <!-- Admin Stats -->
-      <Card interactive padding="p-6" on:click={() => goto("/usuarios")}>
-        <div class="flex items-start justify-between">
-          <div class="p-3 bg-brand-50 text-brand-600 rounded-2xl">
+      <Card interactive padding="p-6" className="group overflow-hidden relative" on:click={() => goto("/usuarios")}>
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-brand-500/5 rounded-full blur-2xl"></div>
+        <div class="flex items-start justify-between relative z-10">
+          <div class="p-3 bg-brand-600 text-white rounded-2xl shadow-lg shadow-brand-200 group-hover:scale-110 transition-transform">
             <Users class="w-6 h-6" />
           </div>
           <Badge variant="brand">Usuários</Badge>
         </div>
-        <div class="mt-4">
+        <div class="mt-4 relative z-10">
           <p
             class="text-sm font-bold text-surface-500 uppercase tracking-wider"
           >
@@ -161,14 +162,15 @@
         </div>
       </Card>
 
-      <Card interactive padding="p-6" on:click={() => goto("/clientes")}>
-        <div class="flex items-start justify-between">
-          <div class="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+      <Card interactive padding="p-6" className="group overflow-hidden relative" on:click={() => goto("/clientes")}>
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
+        <div class="flex items-start justify-between relative z-10">
+          <div class="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
             <Briefcase class="w-6 h-6" />
           </div>
           <Badge variant="info">Clientes</Badge>
         </div>
-        <div class="mt-4">
+        <div class="mt-4 relative z-10">
           <p
             class="text-sm font-bold text-surface-500 uppercase tracking-wider"
           >
@@ -181,14 +183,15 @@
       </Card>
     {:else}
       <!-- Provider Stats -->
-      <Card interactive padding="p-6" on:click={() => goto("/solicitacoes")}>
-        <div class="flex items-start justify-between">
-          <div class="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+      <Card interactive padding="p-6" className="group overflow-hidden relative" on:click={() => goto("/solicitacoes")}>
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
+        <div class="flex items-start justify-between relative z-10">
+          <div class="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
             <Briefcase class="w-6 h-6" />
           </div>
           <Badge variant="info">Total</Badge>
         </div>
-        <div class="mt-4">
+        <div class="mt-4 relative z-10">
           <p
             class="text-sm font-bold text-surface-500 uppercase tracking-wider"
           >
@@ -200,14 +203,15 @@
         </div>
       </Card>
 
-      <Card interactive padding="p-6" on:click={() => goto("/solicitacoes")}>
-        <div class="flex items-start justify-between">
-          <div class="p-3 bg-orange-50 text-orange-600 rounded-2xl">
+      <Card interactive padding="p-6" className="group overflow-hidden relative" on:click={() => goto("/solicitacoes")}>
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl"></div>
+        <div class="flex items-start justify-between relative z-10">
+          <div class="p-3 bg-orange-600 text-white rounded-2xl shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform">
             <Clock class="w-6 h-6" />
           </div>
           <Badge variant="warning">Abertas</Badge>
         </div>
-        <div class="mt-4">
+        <div class="mt-4 relative z-10">
           <p
             class="text-sm font-bold text-surface-500 uppercase tracking-wider"
           >

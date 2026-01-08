@@ -67,6 +67,7 @@
         estado: "",
         site: "",
         logoUrl: "",
+        pixKey: "",
     };
     let isLoadingCepEmpresa = false;
 
@@ -170,6 +171,7 @@
                     telefone: data.telefoneContato || data.telefone || "",
                     site: data.site || "",
                     logoUrl: data.logoUrl || data.logo_url || "",
+                    pixKey: data.pix_key || "",
                     cep: data.endereco?.cep || "",
                     logradouro: data.endereco?.logradouro || "",
                     numero: data.endereco?.numero || "",
@@ -323,6 +325,7 @@
                         },
                         site: empresa.site,
                         logoUrl: empresa.logoUrl,
+                        pix_key: empresa.pixKey,
                     }),
                 });
 
@@ -840,6 +843,11 @@
                                     label="Website"
                                     bind:value={empresa.site}
                                     placeholder="https://suaempresa.com.br"
+                                />
+                                <Input
+                                    label="Chave PIX (Para Pagamentos OS)"
+                                    bind:value={empresa.pixKey}
+                                    placeholder="CPF, E-mail, Telefone ou Chave Aleatória"
                                 />
                             </div>
                         </div>

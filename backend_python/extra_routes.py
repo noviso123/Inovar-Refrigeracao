@@ -21,10 +21,11 @@ class BrandingUpdate(BaseModel):
     cnpj: Optional[str] = None
     emailContato: Optional[str] = None
     telefoneContato: Optional[str] = None
-    
+    pix_key: Optional[str] = None
+
     # Address
     endereco: Optional[dict] = None # { cep, logradouro, numero, ... }
-    
+
     site: Optional[str] = None
     logoUrl: Optional[str] = None
     # Fiscal
@@ -62,6 +63,7 @@ async def get_system_settings(db: Session = Depends(get_db)):
         } if settings.cep or settings.logradouro else None,
         "site": settings.website or "",
         "logoUrl": settings.logo_url or "",
+        "pix_key": settings.pix_key or "",
         "nfseAtivo": settings.nfse_active,
         "inscricaoMunicipal": settings.municipal_registration or "",
         "codigoServico": "14.01", # Fallback default
@@ -81,7 +83,7 @@ async def update_system_settings(data: BrandingUpdate, db: Session = Depends(get
     if data.cnpj: settings.cnpj = data.cnpj
     if data.emailContato: settings.email_contact = data.emailContato
     if data.telefoneContato: settings.phone_contact = data.telefoneContato
-    
+
     if data.endereco:
         addr = data.endereco
         settings.cep = addr.get("cep")
@@ -96,6 +98,7 @@ async def update_system_settings(data: BrandingUpdate, db: Session = Depends(get
     if data.logoUrl: settings.logo_url = data.logoUrl
     if data.nfseAtivo is not None: settings.nfse_active = data.nfseAtivo
     if data.inscricaoMunicipal: settings.municipal_registration = data.inscricaoMunicipal
+    if data.pix_key: settings.pix_key = data.pix_key
 
     db.commit()
     return {"message": "Configurações atualizadas", "success": True}

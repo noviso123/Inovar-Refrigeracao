@@ -54,12 +54,12 @@
     >
       <div class="relative inline-block mb-6">
         <div
-          class="w-24 h-24 bg-brand-600 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-brand-600/30"
+          class="w-24 h-24 bg-white rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-brand-600/10 border border-surface-100 p-4"
         >
-          <ShieldCheck class="w-12 h-12 text-white" />
+          <img src="/logo.png" alt="Inovar Logo" class="w-full h-full object-contain" />
         </div>
         <div
-          class="absolute -top-2 -right-2 w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-lg"
+          class="absolute -top-2 -right-2 w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-lg border border-surface-50"
         >
           <Zap class="w-6 h-6 text-yellow-500 fill-yellow-500" />
         </div>
