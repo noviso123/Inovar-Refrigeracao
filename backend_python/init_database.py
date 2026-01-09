@@ -18,10 +18,11 @@ print("=" * 60)
 print("INOVAR REFRIGERAÇÃO - Database Initialization")
 print("=" * 60)
 
-# 1. Create all tables
-print("\n[1/4] Creating database tables...")
+# 1. Wipe and Recreate Database (Requested by User)
+print("\n[1/4] Wiping and Recreating database tables...")
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
-print("✅ All tables created successfully!")
+print("✅ All tables dropped and recreated successfully!")
 
 # 2. Check which tables exist
 inspector = inspect(engine)
@@ -36,7 +37,7 @@ print("\n[3/4] Initializing default data...")
 db = next(get_db())
 
 try:
-    # System Settings
+    # System Settings (Required for App)
     settings = db.query(SystemSettings).first()
     if not settings:
         settings = SystemSettings(
@@ -48,49 +49,24 @@ try:
         db.add(settings)
         db.commit()
         print("  ✅ System Settings created")
-    else:
-        print("  ⏭️ System Settings already exists")
     
-    # Admin User
-    admin = db.query(User).filter(User.email == "admin@inovar.com").first()
-    if not admin:
-        admin = User(
-            email="admin@inovar.com",
-            password_hash=get_password_hash("admin123"),
-            full_name="Admin Inovar",
+    # Single Admin User (jtsatiro@hotmail.com)
+    admin_user = db.query(User).filter(User.email == "jtsatiro@hotmail.com").first()
+    if not admin_user:
+        admin_user = User(
+            email="jtsatiro@hotmail.com",
+            password_hash=get_password_hash("123456"),
+            full_name="Jhonatan Satiro",
             role="admin",
             is_active=True
         )
-        db.add(admin)
+        db.add(admin_user)
         db.commit()
-        print("  ✅ Admin user created (admin@inovar.com / admin123)")
+        print("  ✅ Admin user created (jtsatiro@hotmail.com / 123456)")
     else:
         print("  ⏭️ Admin user already exists")
     
-    # Prestador User
-    prestador = db.query(User).filter(User.email == "tecnico@inovar.com").first()
-    if not prestador:
-        prestador = User(
-            email="tecnico@inovar.com",
-            password_hash=get_password_hash("tecnico123"),
-            full_name="Técnico Inovar",
-            role="prestador",
-            is_active=True
-        )
-        db.add(prestador)
-        db.commit()
-        print("  ✅ Prestador user created (tecnico@inovar.com / tecnico123)")
-    else:
-        print("  ⏭️ Prestador user already exists")
-
-    # Force Reset Password for jtsatiro (Fix Login 401)
-    target_user = db.query(User).filter(User.email == "jtsatiro@hotmail.com").first()
-    if target_user:
-        target_user.password_hash = get_password_hash("123456")
-        db.commit()
-        print("  ✅ Password RESET for jtsatiro@hotmail.com to '123456'")
-    
-    # Bot Config
+    # Bot Config (Defaults)
     bot_config = db.query(BotConfig).first()
     if not bot_config:
         bot_config = BotConfig(
@@ -105,10 +81,8 @@ try:
         db.add(bot_config)
         db.commit()
         print("  ✅ Bot Config created")
-    else:
-        print("  ⏭️ Bot Config already exists")
-    
-    # Bot Status
+
+    # Bot Status (Defaults)
     bot_status = db.query(BotStatus).first()
     if not bot_status:
         bot_status = BotStatus(
@@ -118,39 +92,6 @@ try:
         db.add(bot_status)
         db.commit()
         print("  ✅ Bot Status created")
-    else:
-        print("  ⏭️ Bot Status already exists")
-    
-    # Test Client
-    test_client = db.query(Client).filter(Client.email == "cliente@teste.com").first()
-    if not test_client:
-        test_client = Client(
-            name="Empresa Teste LTDA",
-            document="12345678901",
-            email="cliente@teste.com",
-            phone="11999998888",
-            maintenance_period=6
-        )
-        db.add(test_client)
-        db.commit()
-        db.refresh(test_client)
-        
-        # Add location
-        location = Location(
-            client_id=test_client.id,
-            nickname="Sede Principal",
-            address="Rua das Empresas",
-            city="São Paulo",
-            state="SP",
-            zip_code="01000-000",
-            street_number="123",
-            neighborhood="Centro"
-        )
-        db.add(location)
-        db.commit()
-        print("  ✅ Test Client created with location")
-    else:
-        print("  ⏭️ Test Client already exists")
     
     print("\n[4/4] Database initialization complete!")
     
