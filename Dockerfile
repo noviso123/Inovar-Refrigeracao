@@ -1,5 +1,4 @@
-# Backend Python + WPPConnect Server - Unified Container for Render
-# Optimized for production deployment
+# Backend Python + WPPConnect Server - Unified Container
 FROM python:3.10-slim
 
 WORKDIR /app
@@ -40,7 +39,7 @@ RUN npm install -g @wppconnect/server \
 # 5. Install Python Dependencies
 COPY backend_python/requirements.txt ./requirements.txt
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -v -r requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt && \
     pip cache purge
 
 # 6. Copy Backend Code
@@ -57,26 +56,17 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 # 8. Create directories for WPPConnect sessions
 RUN mkdir -p /app/tokens /app/sessions
 
-# 9. Create Startup Script with health checks and retry logic
+# 9. Create Startup Script
 RUN echo '#!/bin/bash\n\
     set -e\n\
     \n\
     echo "🔧 Setting up environment..."\n\
     \n\
-    # Function to wait for service\n\
-    wait_for_service() {\n\
-    local host=$1\n\
-    local port=$2\n\
-    local service=$3\n\
-    local retries=30\n\
+    # Start WPPConnect Server in background\n\
+    echo "🚀 Starting WPPConnect Server on port 8080..."\n\
+    wppconnect-server --port 8080 --secretKey "${WPPCONNECT_SECRET:-default_secret}" &\n\
     \n\
-    echo "⏳ Waiting for $service on port $port..."\n\
-    while [ $retries -gt 0 ]; do\n\
-    if curl -s "http://$host:$port" > /dev/null 2>&1; then\n\
-    echo "✅ $service is ready!"\n\
-    return 0\n\
-    fi\n\
-    retries=$((retries - 1))\n\
+    # Start Python Backend\n\
     echo "🐍 Starting Python Backend on port ${PORT:-8000}..."\n\
     exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --workers 1\n\
     ' > start.sh && chmod +x start.sh
@@ -85,7 +75,7 @@ RUN echo '#!/bin/bash\n\
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Expose ports (Render uses $PORT for the main service)
+# Expose ports
 EXPOSE 8080
 
 # Start both services
