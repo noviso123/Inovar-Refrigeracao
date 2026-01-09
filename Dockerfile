@@ -77,21 +77,6 @@ RUN echo '#!/bin/bash\n\
     return 0\n\
     fi\n\
     retries=$((retries - 1))\n\
-    sleep 1\n\
-    done\n\
-    echo "⚠️ $service timeout, continuing anyway..."\n\
-    return 0\n\
-    }\n\
-    \n\
-    # Start WPPConnect Server in background\n\
-    echo "🚀 Starting WPPConnect Server on port 8080..."\n\
-    npx @wppconnect/server --port 8080 --secretKey "${WPPCONNECT_SECRET:-default_secret}" &\n\
-    WPPCONNECT_PID=$!\n\
-    \n\
-    # Wait for WPPConnect to be ready\n\
-    wait_for_service localhost 8080 "WPPConnect"\n\
-    \n\
-    # Start Python Backend\n\
     echo "🐍 Starting Python Backend on port ${PORT:-8000}..."\n\
     exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --workers 1\n\
     ' > start.sh && chmod +x start.sh

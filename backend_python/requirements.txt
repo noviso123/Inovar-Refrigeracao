@@ -21,3 +21,4 @@ APScheduler==3.10.4
 supabase==2.3.0
 python-dotenv
 crcmod==1.7
+reportlab==4.0.9
