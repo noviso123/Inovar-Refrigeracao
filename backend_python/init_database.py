@@ -18,11 +18,18 @@ print("=" * 60)
 print("INOVAR REFRIGERAÇÃO - Database Initialization")
 print("=" * 60)
 
-# 1. Wipe and Recreate Database (Requested by User)
-print("\n[1/4] Wiping and Recreating database tables...")
-Base.metadata.drop_all(bind=engine)
+# 1. Wipe and Recreate Database (Controlled by Env Var)
+reset_db = os.getenv("RESET_DB", "false").lower() == "true"
+if reset_db:
+    print("\n⚠️  RESET_DB=true detected! Wiping database...")
+    Base.metadata.drop_all(bind=engine)
+    print("✅ All tables dropped successfully!")
+else:
+    print("\nℹ️  RESET_DB not set. Skipping wipe.")
+
+print("\n[1/4] Creating/Verifying database tables...")
 Base.metadata.create_all(bind=engine)
-print("✅ All tables dropped and recreated successfully!")
+print("✅ Tables verified/created.")
 
 # 2. Check which tables exist
 inspector = inspect(engine)
