@@ -95,7 +95,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # Configurações de Ambiente
-WHATSAPP_URL = os.getenv("WHATSAPP_URL", "")
+WHATSAPP_URL = os.getenv("WHATSAPP_URL") or os.getenv("WPPCONNECT_URL", "http://localhost:8081")
+if WHATSAPP_URL and not WHATSAPP_URL.startswith("http"):
+    WHATSAPP_URL = f"http://{WHATSAPP_URL}"
 
 # Middleware Global para Corrigir Erros 405 (HEAD e Slashes)
 @app.middleware("http")
