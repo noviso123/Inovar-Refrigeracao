@@ -1,5 +1,5 @@
 services:
-  # 1. Backend API (Python)
+  # 1. Unified Backend + WPPConnect (Single Container)
   - type: web
     name: inovar-backend
     runtime: docker
@@ -11,25 +11,8 @@ services:
       - key: SUPABASE_URL
         sync: false
       - key: WPPCONNECT_URL
-        fromService:
-          type: web
-          name: inovar-wppconnect
-          property: url
+        value: http://localhost:8080 # Internal connection
       - key: WPPCONNECT_SECRET
         generateValue: true
       - key: WPPCONNECT_SESSION
         value: inovar
-
-  # 2. WPPConnect Server (WhatsApp)
-  - type: web
-    name: inovar-wppconnect
-    runtime: image
-    image: wppconnect/server-cli:latest
-    envVars:
-      - key: SECRET_KEY
-        fromService:
-          type: web
-          name: inovar-backend
-          envVarKey: WPPCONNECT_SECRET
-      - key: PORT
-        value: 8080
