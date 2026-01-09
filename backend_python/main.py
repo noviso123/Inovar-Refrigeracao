@@ -402,9 +402,20 @@ async def websocket_notifications(websocket: WebSocket, token: str = None):
         except:
             pass
 
-@app.get("/")
-async def root():
-    return {"status": "ok", "service": "Inovar Refrigeração API", "version": "1.0.1"}
+# Serve Static Files (Frontend)
+app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+
+# SPA Fallback - Catch all other routes and serve index.html
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    # API routes are already handled above due to order
+    # If file exists in static, serve it (e.g. favicon, manifest)
+    static_file_path = os.path.join("static", full_path)
+    if os.path.exists(static_file_path) and os.path.isfile(static_file_path):
+        return FileResponse(static_file_path)
+    
+    # Otherwise serve index.html
+    return FileResponse("static/index.html")
 
 if __name__ == "__main__":
     import uvicorn

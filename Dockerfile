@@ -1,4 +1,14 @@
-# Backend Python + WPPConnect Server - Unified Container
+# Stage 1: Build Frontend
+FROM node:20-slim AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend-svelte/package*.json ./
+RUN npm install
+COPY frontend-svelte/ .
+# Set API URL to relative path for unified deployment
+ENV VITE_API_URL=""
+RUN npm run build
+
+# Stage 2: Backend + WPPConnect - Unified Container
 FROM python:3.10-slim
 
 WORKDIR /app
@@ -9,15 +19,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     gcc \
     python3-dev \
-    ffmpeg \
-    libpq-dev \
     curl \
     ca-certificates \
     build-essential \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# 2. Install Node.js 20 LTS
+# 2. Install Node.js 20 LTS (For WPPConnect)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && npm install -g npm@latest \
@@ -45,7 +53,10 @@ RUN pip install --upgrade pip && \
 # 6. Copy Backend Code
 COPY backend_python/ .
 
-# 7. Environment Variables
+# 7. Copy Frontend Build from Stage 1
+COPY --from=frontend-builder /app/frontend/build /app/static
+
+# 8. Environment Variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV MALLOC_ARENA_MAX=2
@@ -53,14 +64,33 @@ ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
-# 8. Create directories for WPPConnect sessions
+# 9. Create directories for WPPConnect sessions
 RUN mkdir -p /app/tokens /app/sessions
 
-# 9. Create Startup Script
+# 10. Create Startup Script
 # No 'set -e' to ensure backend starts even if WPP fails
 RUN echo '#!/bin/bash\n\
-    # Expose ports
-    EXPOSE 8081
+    echo "🔧 Starting services..."\n\
+    \n\
+    # Run Database Initialization (Wipe & Reset if requested)\n\
+    echo "🧹 Running Database Initialization..."\n\
+    python init_database.py\n\
+    \n\
+    # Start WPPConnect Server\n\
+    echo "🚀 Starting WPPConnect Server on port 8081..."\n\
+    wppconnect-server --port 8081 --secretKey "${WPPCONNECT_SECRET:-default_secret}" > /app/wpp.log 2>&1 &\n\
+    \n\
+    # Start Python Backend\n\
+    echo "🐍 Starting Python Backend on port ${PORT:-8000}..."\n\
+    exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --workers 1\n\
+    ' > /app/start.sh && chmod +x /app/start.sh
+
+# 11. Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+
+# Expose ports
+EXPOSE 8081
 
 # Start both services
 CMD ["/bin/bash", "/app/start.sh"]
