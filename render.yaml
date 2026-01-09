@@ -66,3 +66,7 @@ services:
       # CORS - Allow all origins for production
       - key: CORS_ALLOW_ALL
         value: "true"
+      
+      # Python Version for Native Runtime (Fallback)
+      - key: PYTHON_VERSION
+        value: 3.10.13
