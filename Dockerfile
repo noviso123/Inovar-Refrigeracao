@@ -57,12 +57,15 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 RUN mkdir -p /app/tokens /app/sessions
 
 # 9. Create Startup Script
-# Simplified: Start both in parallel, no waiting logic to avoid Railway timeout
+# No 'set -e' to ensure backend starts even if WPP fails
 RUN echo '#!/bin/bash\n\
-    set -e\n\
+    echo "🔧 Starting services..."\n\
+    \n\
+    # Start WPPConnect Server\n\
     echo "🚀 Starting WPPConnect Server on port 8081..."\n\
     wppconnect-server --port 8081 --secretKey "${WPPCONNECT_SECRET:-default_secret}" > /app/wpp.log 2>&1 &\n\
     \n\
+    # Start Python Backend\n\
     echo "🐍 Starting Python Backend on port ${PORT:-8000}..."\n\
     exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --workers 1\n\
     ' > /app/start.sh && chmod +x /app/start.sh
@@ -75,4 +78,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 EXPOSE 8081
 
 # Start both services
-CMD ["/app/start.sh"]
+CMD ["/bin/bash", "/app/start.sh"]
