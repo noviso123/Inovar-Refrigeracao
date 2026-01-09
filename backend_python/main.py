@@ -240,6 +240,11 @@ def check_whatsapp_health() -> dict:
     except Exception as e:
         return {"status": "unavailable", "error": str(e)}
 
+@app.get("/health")
+async def health_check_simple():
+    """Simple health check for Docker/Render health probes"""
+    return {"status": "ok"}
+
 @app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health_check_detailed():
     services = {

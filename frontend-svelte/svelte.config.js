@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-vercel';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,10 +8,27 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-		adapter: adapter()
+		// Use Vercel adapter for deployment
+		adapter: adapter({
+			// Use Edge Functions for faster response times (optional)
+			// runtime: 'edge',
+			
+			// Use Node.js runtime (default, more compatible)
+			runtime: 'nodejs22.x',
+			
+			// Regions to deploy to (optional - Vercel will auto-select)
+			// regions: ['gru1'], // São Paulo
+			
+			// Split output for better caching (recommended)
+			split: true
+		}),
+		
+		// Alias for easier imports
+		alias: {
+			$components: 'src/lib/components',
+			$stores: 'src/lib/stores',
+			$services: 'src/lib/services'
+		}
 	}
 };
 

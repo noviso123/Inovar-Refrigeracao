@@ -1,19 +1,58 @@
+# Render Blueprint - Inovar Refrigeração
+# Backend Python + WPPConnect in a single Web Service
+
 services:
   # Backend + WPPConnect (Single Container)
   - type: web
     name: inovar-backend
     runtime: docker
     dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    region: oregon  # ou 'frankfurt' para Europa
+    plan: starter   # 512 MB RAM - upgrade para 'standard' se necessário
+    
+    # Auto-deploy from GitHub
+    autoDeploy: true
+    
+    # Health Check
+    healthCheckPath: /health
+    
+    # Environment Variables
     envVars:
+      # Database (Supabase PostgreSQL)
       - key: DATABASE_URL
-        sync: false # User will input in dashboard
+        sync: false  # User will input in Render dashboard
+      
+      # Supabase Config
       - key: SUPABASE_URL
-        sync: false
+        sync: false  # User will input
       - key: SUPABASE_SERVICE_KEY
-        sync: false
+        sync: false  # User will input
+      
+      # Security
+      - key: SECRET_KEY
+        generateValue: true  # Auto-generate secure key
+      
+      # WPPConnect (Internal - same container)
       - key: WPPCONNECT_URL
         value: http://localhost:8080
       - key: WPPCONNECT_SECRET
         generateValue: true
       - key: WPPCONNECT_SESSION
         value: inovar
+      
+      # Redis (Optional - for message queues)
+      - key: REDIS_URL
+        sync: false  # Optional, leave empty if not using
+      
+      # WhatsApp/Evolution API (if using external)
+      - key: WHATSAPP_URL
+        sync: false  # Optional
+      - key: EVOLUTION_API_KEY
+        sync: false  # Optional
+      
+      # Python/Uvicorn settings
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
