@@ -335,7 +335,7 @@ async def upload_file(file: UploadFile = File(...), bucket: str = "os-photos"):
 
 # Include Routers
 app.include_router(auth_router, prefix="/api")
-app.include_router(whatsapp_router, prefix="/api")
+app.include_router(whatsapp_router)  # Router already has /api/whatsapp prefix
 app.include_router(solicitacoes_router, prefix="/api")
 app.include_router(usuarios_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")

@@ -1,10 +1,4 @@
 import { writable, derived, type Writable } from 'svelte/store';
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://apntpretjodygczbeozk.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_1lPwrqXB373GKcILWHyukA_voiQCgyO';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Tipos
 export interface Usuario {
@@ -30,29 +24,34 @@ export const isAdmin = derived(user, ($user) => $user?.cargo === 'admin');
 export async function initAuth() {
     if (typeof window === 'undefined') return;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    // Tentar recuperar token do localStorage
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
 
-    if (session) {
-        token.set(session.access_token);
-        localStorage.setItem('token', session.access_token);
+    if (savedToken && savedUser) {
+        token.set(savedToken);
+        try {
+            const userData = JSON.parse(savedUser);
+            user.set(userData);
 
-        // Buscar perfil do backend (que agora verifica o JWT do Supabase)
-        await fetchProfile(session.access_token);
-    }
+            // Validar token com backend
+            const response = await fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${savedToken}` }
+            });
 
-    // Escutar mudanças no estado de auth
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session) {
-            token.set(session.access_token);
-            localStorage.setItem('token', session.access_token);
-            await fetchProfile(session.access_token);
-        } else {
-            user.set(null);
-            token.set(null);
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            if (response.ok) {
+                const freshUserData = await response.json();
+                user.set(freshUserData);
+                localStorage.setItem('user', JSON.stringify(freshUserData));
+            } else {
+                // Token inválido, limpar
+                logout();
+            }
+        } catch (e) {
+            console.error("Erro ao restaurar sessão", e);
+            logout();
         }
-    });
+    }
 }
 
 async function fetchProfile(accessToken: string) {
@@ -64,28 +63,53 @@ async function fetchProfile(accessToken: string) {
             const userData = await response.json();
             user.set(userData);
             localStorage.setItem('user', JSON.stringify(userData));
+            return userData;
         } else {
             console.error("Erro ao buscar perfil");
+            return null;
         }
     } catch (e) {
         console.error("Erro na requisição de perfil", e);
+        return null;
     }
 }
 
-// Login
+// Login usando backend local
 export async function login(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+    const formData = new URLSearchParams();
+    formData.append('username', email);
+    formData.append('password', password);
+
+    const response = await fetch('/api/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
     });
 
-    if (error) throw error;
-    return data.user;
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Erro ao fazer login' }));
+        throw new Error(error.detail || 'E-mail ou senha incorretos');
+    }
+
+    const data = await response.json();
+    const accessToken = data.access_token;
+
+    token.set(accessToken);
+    localStorage.setItem('token', accessToken);
+
+    // Buscar perfil do usuário
+    const userData = await fetchProfile(accessToken);
+    if (!userData) {
+        throw new Error('Erro ao carregar dados do usuário');
+    }
+
+    return userData;
 }
 
 // Logout
 export async function logout() {
-    await supabase.auth.signOut();
     user.set(null);
     token.set(null);
     localStorage.removeItem('token');

@@ -45,8 +45,8 @@
   --color-surface-secondary: var(--color-surface-100);
 
   --color-text-primary: var(--color-surface-900);
-  --color-text-secondary: var(--color-surface-600);
-  --color-text-muted: var(--color-surface-400);
+  --color-text-secondary: var(--color-surface-700);
+  --color-text-muted: var(--color-surface-500);
 
   --color-border: var(--color-surface-200);
   --color-border-light: var(--color-surface-100);

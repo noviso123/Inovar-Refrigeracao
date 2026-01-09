@@ -7,10 +7,15 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import os
+import logging
+import traceback
 
 from database import get_db
 from models import User
 from validators import validate_cpf, validate_cnpj
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Router
 router = APIRouter()
@@ -27,10 +32,16 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     print("⚠️ Supabase Credentials missing in backend!")
 
 from supabase import create_client, Client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    print(f"⚠️ Error initializing Supabase client: {e}")
+    supabase = None
 
+# Local Auth Implementation
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-it")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
 # Pydantic Models
 class Token(BaseModel):
@@ -52,11 +63,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
-# Local Auth Implementation
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-it")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
-
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
@@ -70,6 +76,14 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 # Define OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 
+def authenticate_user(db: Session, email: str, password: str):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return False
+    if not verify_password(password, user.password_hash):
+        return False
+    return user
+
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -77,41 +91,63 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    email = None
+    
+    # Primeiro, tentar decodificar como JWT local
     try:
-        # Verificar o token com o Supabase
-        res = supabase.auth.get_user(token)
-        if not res or not res.user:
-            raise credentials_exception
-
-        email = res.user.email
-    except Exception as e:
-        logger.error(f"Erro ao verificar token no Supabase: {e}")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if email:
+            logger.info(f"Token local validado para: {email}")
+    except JWTError as e:
+        logger.debug(f"Não é um token local, tentando Supabase: {e}")
+    
+    # Se não conseguiu via JWT local, tentar Supabase
+    if not email and supabase:
+        try:
+            res = supabase.auth.get_user(token)
+            if res and res.user:
+                email = res.user.email
+                logger.info(f"Token Supabase validado para: {email}")
+        except Exception as e:
+            logger.debug(f"Erro ao verificar token no Supabase: {e}")
+    
+    if not email:
+        logger.warning("Nenhum método de autenticação conseguiu validar o token")
         raise credentials_exception
 
     user = db.query(User).filter(User.email == email).first()
     if user is None:
-        # Opcional: Criar usuário localmente se não existir mas estiver no Supabase
-        # Para este sistema, assumimos que o admin já criou o usuário no banco local
+        logger.warning(f"Usuário não encontrado no banco local: {email}")
         raise credentials_exception
     return user
+
 
 # Rotas
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="E-mail ou senha incorretos",
-            headers={"WWW-Authenticate": "Bearer"},
+    try:
+        logger.info(f"Login attempt for: {form_data.username}")
+        user = authenticate_user(db, form_data.username, form_data.password)
+        if not user:
+            logger.warning(f"Login failed for: {form_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email, "role": user.role, "id": user.id},
+            expires_delta=access_token_expires
         )
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "role": user.role, "id": user.id},
-        expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+        logger.info(f"Login successful for: {form_data.username}")
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/users/me")
 async def read_users_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
