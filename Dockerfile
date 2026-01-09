@@ -63,9 +63,8 @@ RUN printf "#!/bin/bash\n\
     echo \"🔧 Setting up environment...\"\n\
     \n\
     # Start WPPConnect Server in background on port 8081\n\
-    # We use 8081 to avoid conflict with Railway's \$PORT (usually 8080)\n\
     echo \"🚀 Starting WPPConnect Server on port 8081...\"\n\
-    wppconnect-server --port 8081 --secretKey \"\${WPPCONNECT_SECRET:-default_secret}\" &\n\
+    /usr/local/bin/wppconnect-server --port 8081 --secretKey \"\${WPPCONNECT_SECRET:-default_secret}\" > wpp.log 2>&1 &\n\
     \n\
     # Start Python Backend\n\
     echo \"🐍 Starting Python Backend on port \${PORT:-8000}...\"\n\

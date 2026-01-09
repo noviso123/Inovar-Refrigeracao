@@ -6,7 +6,10 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # WPPConnect Configuration
-WPPCONNECT_URL = os.getenv("WPPCONNECT_URL", "http://localhost:21465")
+WPPCONNECT_URL = os.getenv("WPPCONNECT_URL", "http://localhost:8081")
+if WPPCONNECT_URL and not WPPCONNECT_URL.startswith("http"):
+    WPPCONNECT_URL = f"http://{WPPCONNECT_URL}"
+
 WPPCONNECT_SECRET = os.getenv("WPPCONNECT_SECRET", "THISISMYSECURETOKEN")
 WPPCONNECT_SESSION = os.getenv("WPPCONNECT_SESSION", "inovar")
 
