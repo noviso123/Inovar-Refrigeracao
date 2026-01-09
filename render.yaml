@@ -67,6 +67,12 @@ services:
       - key: CORS_ALLOW_ALL
         value: "true"
       
+      # WPPConnect Configuration
+      - key: WPPCONNECT_URL
+        value: http://localhost:8080
+      - key: WPPCONNECT_SESSION
+        value: inovar
+      
       # Python Version for Native Runtime (Fallback)
       - key: PYTHON_VERSION
         value: 3.10.13
