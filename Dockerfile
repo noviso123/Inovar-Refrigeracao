@@ -57,39 +57,22 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 RUN mkdir -p /app/tokens /app/sessions
 
 # 9. Create Startup Script
-RUN printf "#!/bin/bash\n\
+# Simplified: Start both in parallel, no waiting logic to avoid Railway timeout
+RUN echo '#!/bin/bash\n\
     set -e\n\
+    echo "🚀 Starting WPPConnect Server on port 8081..."\n\
+    wppconnect-server --port 8081 --secretKey "${WPPCONNECT_SECRET:-default_secret}" > /app/wpp.log 2>&1 &\n\
     \n\
-    echo \"🔧 Setting up environment...\"\n\
-    \n\
-    # Start WPPConnect Server in background on port 8081\n\
-    echo \"🚀 Starting WPPConnect Server on port 8081...\"\n\
-    # Use 'command -v' to find the executable path dynamically\n\
-    WPP_CMD=\$(command -v wppconnect-server)\n\
-    echo \"Found wppconnect-server at: \$WPP_CMD\"\n\
-    \n\
-    \$WPP_CMD --port 8081 --secretKey \"\${WPPCONNECT_SECRET:-default_secret}\" > wpp.log 2>&1 &\n\
-    \n\
-    # Wait for WPPConnect to be ready (max 60s)\n\
-    echo \"⏳ Waiting for WPPConnect to start on port 8081...\"\n\
-    for i in {1..60}; do\n\
-    if curl -s http://localhost:8081 > /dev/null; then\n\
-    echo \"✅ WPPConnect is up!\"\n\
-    break\n\
-    fi\n\
-    sleep 1\n\
-    done\n\
-    \n\
-    # Start Python Backend\n\
-    echo \"🐍 Starting Python Backend on port \${PORT:-8000}...\"\n\
-    exec uvicorn main:app --host 0.0.0.0 --port \${PORT:-8000} --proxy-headers --workers 1\n" > start.sh && chmod +x start.sh
+    echo "🐍 Starting Python Backend on port ${PORT:-8000}..."\n\
+    exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --workers 1\n\
+    ' > /app/start.sh && chmod +x /app/start.sh
 
 # 10. Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # Expose ports
 EXPOSE 8081
 
 # Start both services
-CMD ["./start.sh"]
+CMD ["/app/start.sh"]
