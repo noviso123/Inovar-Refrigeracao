@@ -57,21 +57,29 @@ try:
         db.commit()
         print("  ✅ System Settings created")
     
-    # Single Admin User (jtsatiro@hotmail.com)
-    admin_user = db.query(User).filter(User.email == "jtsatiro@hotmail.com").first()
+    # Single Admin User (jtsatiro@hotmail.com) - ALWAYS ENSURE EXISTS AND HAS CORRECT PASSWORD
+    admin_email = "jtsatiro@hotmail.com"
+    admin_pass = "123456"
+    admin_user = db.query(User).filter(User.email == admin_email).first()
+    
     if not admin_user:
         admin_user = User(
-            email="jtsatiro@hotmail.com",
-            password_hash=get_password_hash("123456"),
+            email=admin_email,
+            password_hash=get_password_hash(admin_pass),
             full_name="Jhonatan Satiro",
             role="admin",
             is_active=True
         )
         db.add(admin_user)
-        db.commit()
-        print("  ✅ Admin user created (jtsatiro@hotmail.com / 123456)")
+        print(f"  ✅ Admin user created ({admin_email} / {admin_pass})")
     else:
-        print("  ⏭️ Admin user already exists")
+        # Force update password
+        admin_user.password_hash = get_password_hash(admin_pass)
+        admin_user.role = "admin"
+        admin_user.is_active = True
+        print(f"  🔄 Admin user updated ({admin_email} / {admin_pass})")
+    
+    db.commit()
     
     # Bot Config (Defaults)
     bot_config = db.query(BotConfig).first()
