@@ -144,6 +144,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
         logger.info(f"Login successful for: {form_data.username}")
         return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Login error: {e}")
         logger.error(traceback.format_exc())
