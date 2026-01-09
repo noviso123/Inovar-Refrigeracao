@@ -46,3 +46,7 @@ services:
         value: "1"
       - key: PYTHONDONTWRITEBYTECODE
         value: "1"
+      
+      # CORS - Allow all origins for production
+      - key: CORS_ALLOW_ALL
+        value: "true"

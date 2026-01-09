@@ -126,7 +126,7 @@ async def process_whatsapp_queue():
                     
                     if success:
                         msg.status = 'enviado'
-                        msg.sent_at = datetime.utcnow()
+                        msg.enviado_em = datetime.utcnow()
                     else:
                         msg.status = 'erro'
                         # Optional: Increment retry count if you add that field
