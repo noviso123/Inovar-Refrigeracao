@@ -10,7 +10,6 @@ const config = {
 	kit: {
 		// Use Vercel adapter with split: false to use a single function (avoids 12 function limit)
 		adapter: adapter({
-			runtime: 'nodejs20.x',
 			split: false
 		}),
 
