@@ -1,23 +1,14 @@
-# Exclude local environments
 node_modules
-.venv
-venv
-env
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-
-# Exclude git
-.git
-.gitignore
-
-# Exclude sensitive files
+.svelte-kit
+build
+dist
 .env
 .env.*
-!env_render_final.txt
-*.log
-
-# Exclude IDE folders
-.vscode
-.idea
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+.DS_Store
+backend_python/__pycache__
+backend_python/.venv
