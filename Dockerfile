@@ -57,26 +57,26 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 RUN mkdir -p /app/tokens /app/sessions
 
 # 9. Create Startup Script
-RUN echo '#!/bin/bash\n\
+RUN printf "#!/bin/bash\n\
     set -e\n\
     \n\
-    echo "🔧 Setting up environment..."\n\
+    echo \"🔧 Setting up environment...\"\n\
     \n\
-    # Start WPPConnect Server in background\n\
-    echo "🚀 Starting WPPConnect Server on port 8080..."\n\
-    wppconnect-server --port 8080 --secretKey "${WPPCONNECT_SECRET:-default_secret}" &\n\
+    # Start WPPConnect Server in background on port 8081\n\
+    # We use 8081 to avoid conflict with Railway's \$PORT (usually 8080)\n\
+    echo \"🚀 Starting WPPConnect Server on port 8081...\"\n\
+    wppconnect-server --port 8081 --secretKey \"\${WPPCONNECT_SECRET:-default_secret}\" &\n\
     \n\
     # Start Python Backend\n\
-    echo "🐍 Starting Python Backend on port ${PORT:-8000}..."\n\
-    exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --workers 1\n\
-    ' > start.sh && chmod +x start.sh
+    echo \"🐍 Starting Python Backend on port \${PORT:-8000}...\"\n\
+    exec uvicorn main:app --host 0.0.0.0 --port \${PORT:-8000} --proxy-headers --workers 1\n" > start.sh && chmod +x start.sh
 
 # 10. Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # Expose ports
-EXPOSE 8080
+EXPOSE 8081
 
 # Start both services
 CMD ["./start.sh"]
