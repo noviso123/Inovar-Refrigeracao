@@ -1,0 +1,35 @@
+services:
+  # 1. Backend API (Python)
+  - type: web
+    name: inovar-backend
+    runtime: docker
+    context: backend_python
+    dockerfilePath: backend_python/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        sync: false # User will input this in dashboard
+      - key: SUPABASE_URL
+        sync: false
+      - key: WPPCONNECT_URL
+        fromService:
+          type: web
+          name: inovar-wppconnect
+          property: url
+      - key: WPPCONNECT_SECRET
+        generateValue: true
+      - key: WPPCONNECT_SESSION
+        value: inovar
+
+  # 2. WPPConnect Server (WhatsApp)
+  - type: web
+    name: inovar-wppconnect
+    runtime: image
+    image: wppconnect/server-cli:latest
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: inovar-backend
+          envVarKey: WPPCONNECT_SECRET
+      - key: PORT
+        value: 8080

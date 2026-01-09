@@ -11,13 +11,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# WPPConnect Configuration
-WPPCONNECT_URL = os.getenv("WPPCONNECT_URL", "http://localhost:21465")
-WPPCONNECT_SECRET = os.getenv("WPPCONNECT_SECRET", "THISISMYSECURETOKEN")
-WPPCONNECT_SESSION = os.getenv("WPPCONNECT_SESSION", "inovar")
+from services.whatsapp_service import wpp_request, generate_token, WPPCONNECT_SESSION, WPPCONNECT_SECRET, WPPCONNECT_URL
 
 router = APIRouter(prefix="/api/whatsapp", tags=["WhatsApp"])
-
 
 class ConfigUpdate(BaseModel):
     min_delay: Optional[int] = None
@@ -26,51 +22,10 @@ class ConfigUpdate(BaseModel):
     hora_fim: Optional[str] = None
     ativo: Optional[bool] = None
 
-
 class MessageSend(BaseModel):
     number: str
     message: str
     media_url: Optional[str] = None
-
-
-# Helper function to make WPPConnect API requests
-async def wpp_request(method: str, endpoint: str, data: dict = None, params: dict = None):
-    """Make request to WPPConnect Server."""
-    headers = {
-        "Authorization": f"Bearer {WPPCONNECT_SECRET}",
-        "Content-Type": "application/json"
-    }
-    url = f"{WPPCONNECT_URL}/api/{WPPCONNECT_SESSION}{endpoint}"
-    
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            if method == "GET":
-                response = await client.get(url, headers=headers, params=params)
-            elif method == "POST":
-                response = await client.post(url, headers=headers, json=data)
-            elif method == "DELETE":
-                response = await client.delete(url, headers=headers)
-            else:
-                raise ValueError(f"Unsupported method: {method}")
-            
-            return response
-    except Exception as e:
-        logger.error(f"WPPConnect request error: {e}")
-        raise
-
-
-async def generate_token():
-    """Generate authentication token for WPPConnect session."""
-    url = f"{WPPCONNECT_URL}/{WPPCONNECT_SESSION}/{WPPCONNECT_SECRET}/generate-token"
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(url)
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("token")
-    except Exception as e:
-        logger.error(f"Token generation error: {e}")
-    return None
 
 
 @router.get("/status")

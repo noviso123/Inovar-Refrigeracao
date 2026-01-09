@@ -1,0 +1,9 @@
+{
+    "framework": "svelte",
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/"
+        }
+    ]
+}
