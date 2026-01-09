@@ -9,10 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
     gcc \
+    python3-dev \
     ffmpeg \
     libpq-dev \
     curl \
     ca-certificates \
+    build-essential \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -37,8 +39,9 @@ RUN npm install -g @wppconnect/server \
 
 # 5. Install Python Dependencies
 COPY backend_python/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip cache purge
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -v -r requirements.txt && \
+    pip cache purge
 
 # 6. Copy Backend Code
 COPY backend_python/ .
