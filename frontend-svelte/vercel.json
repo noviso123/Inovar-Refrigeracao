@@ -3,6 +3,10 @@
         {
             "source": "/api/:match*",
             "destination": "https://inovar-backend-production.up.railway.app/api/:match*"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
     ]
 }
