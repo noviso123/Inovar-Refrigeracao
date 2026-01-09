@@ -64,7 +64,21 @@ RUN printf "#!/bin/bash\n\
     \n\
     # Start WPPConnect Server in background on port 8081\n\
     echo \"🚀 Starting WPPConnect Server on port 8081...\"\n\
-    /usr/local/bin/wppconnect-server --port 8081 --secretKey \"\${WPPCONNECT_SECRET:-default_secret}\" > wpp.log 2>&1 &\n\
+    # Use 'command -v' to find the executable path dynamically\n\
+    WPP_CMD=\$(command -v wppconnect-server)\n\
+    echo \"Found wppconnect-server at: \$WPP_CMD\"\n\
+    \n\
+    \$WPP_CMD --port 8081 --secretKey \"\${WPPCONNECT_SECRET:-default_secret}\" > wpp.log 2>&1 &\n\
+    \n\
+    # Wait for WPPConnect to be ready (max 60s)\n\
+    echo \"⏳ Waiting for WPPConnect to start on port 8081...\"\n\
+    for i in {1..60}; do\n\
+    if curl -s http://localhost:8081 > /dev/null; then\n\
+    echo \"✅ WPPConnect is up!\"\n\
+    break\n\
+    fi\n\
+    sleep 1\n\
+    done\n\
     \n\
     # Start Python Backend\n\
     echo \"🐍 Starting Python Backend on port \${PORT:-8000}...\"\n\
