@@ -1,17 +1,18 @@
 services:
-  # 1. Unified Backend + WPPConnect (Single Container)
+  # Backend + WPPConnect (Single Container)
   - type: web
     name: inovar-backend
     runtime: docker
-    context: backend_python
-    dockerfilePath: backend_python/Dockerfile
+    dockerfilePath: ./Dockerfile.render
     envVars:
       - key: DATABASE_URL
-        sync: false # User will input this in dashboard
+        sync: false # User will input in dashboard
       - key: SUPABASE_URL
         sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
       - key: WPPCONNECT_URL
-        value: http://localhost:8080 # Internal connection
+        value: http://localhost:8080
       - key: WPPCONNECT_SECRET
         generateValue: true
       - key: WPPCONNECT_SESSION

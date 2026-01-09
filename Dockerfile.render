@@ -1,0 +1,60 @@
+# Backend Python + WPPConnect Server - Unified Container for Render
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# 1. Install System Dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    gcc \
+    ffmpeg \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Install Node.js 18
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest
+
+# 3. Install Google Chrome (for WPPConnect/Puppeteer)
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# 4. Install WPPConnect Server globally
+RUN npm install -g @wppconnect/server
+
+# 5. Install Python Dependencies
+COPY backend_python/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 6. Copy Backend Code
+COPY backend_python/ .
+
+# 7. Environment Variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV MALLOC_ARENA_MAX=2
+
+# 8. Create Startup Script (WPPConnect + Uvicorn)
+RUN echo '#!/bin/bash\n\
+echo "🚀 Starting WPPConnect Server on port 8080..."\n\
+npx @wppconnect/server --port 8080 &\n\
+WPPCONNECT_PID=$!\n\
+\n\
+# Wait for WPPConnect to initialize\n\
+sleep 5\n\
+\n\
+echo "🐍 Starting Python Backend on port $PORT..."\n\
+exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers\n\
+' > start.sh && chmod +x start.sh
+
+# Expose internal WPPConnect port (Render manages external port via $PORT)
+EXPOSE 8080
+
+# Start both services
+CMD ["./start.sh"]
