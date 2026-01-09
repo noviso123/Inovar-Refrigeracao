@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-vercel';
+import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,21 +8,12 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// Use Vercel adapter for deployment
+		// Use Static adapter for SPA deployment (0 serverless functions)
 		adapter: adapter({
-			// Use Edge Functions for faster response times (optional)
-			// runtime: 'edge',
-			
-			// Use Node.js runtime (default, more compatible)
-			runtime: 'nodejs22.x',
-			
-			// Regions to deploy to (optional - Vercel will auto-select)
-			// regions: ['gru1'], // São Paulo
-			
-			// Split output for better caching (recommended)
-			split: true
+			fallback: 'index.html', // SPA mode
+			strict: false
 		}),
-		
+
 		// Alias for easier imports
 		alias: {
 			$components: 'src/lib/components',
