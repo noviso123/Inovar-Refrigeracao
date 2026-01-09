@@ -4,19 +4,26 @@
 services:
   - type: web
     name: inovar-backend
-    runtime: python
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: Dockerfile.render
     region: oregon
     plan: free
     
     # GitHub Branch
     branch: main
     
-    # Root Directory (where the Python code is)
-    rootDir: backend_python
+    # Auto-deploy from GitHub
+    autoDeploy: true
     
-    # Build & Start Commands
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    # Health Check
+    healthCheckPath: /health
+    
+    # Environment Variables (PRE-FILLED)
+    envVars:
+      # WPPConnect Secret
+      - key: WPPCONNECT_SECRET
+        value: inovar-wpp-secret-2024
     
     # Auto-deploy from GitHub
     autoDeploy: true
