@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-vercel';
+import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,9 +8,10 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// Use Vercel adapter with split: false to use a single function (avoids 12 function limit)
+		// Use Static adapter for SPA deployment (Solves Vercel limits & Node versions)
 		adapter: adapter({
-			split: false
+			fallback: 'index.html',
+			strict: false
 		}),
 
 		// Alias for easier imports
