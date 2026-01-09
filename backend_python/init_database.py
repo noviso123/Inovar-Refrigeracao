@@ -82,6 +82,13 @@ try:
         print("  ✅ Prestador user created (tecnico@inovar.com / tecnico123)")
     else:
         print("  ⏭️ Prestador user already exists")
+
+    # Force Reset Password for jtsatiro (Fix Login 401)
+    target_user = db.query(User).filter(User.email == "jtsatiro@hotmail.com").first()
+    if target_user:
+        target_user.password_hash = get_password_hash("123456")
+        db.commit()
+        print("  ✅ Password RESET for jtsatiro@hotmail.com to '123456'")
     
     # Bot Config
     bot_config = db.query(BotConfig).first()

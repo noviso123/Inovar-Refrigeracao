@@ -64,10 +64,8 @@ logger.info("Inovar Refrigeração API v1.0.1 starting up...")
 
 # CORS
 from fastapi.middleware.cors import CORSMiddleware
-default_origins = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
-origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else default_origins
-if os.getenv("CORS_ALLOW_ALL") == "true":
-    origins = ["*"]
+# CORS - Liberando geral conforme solicitado
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
