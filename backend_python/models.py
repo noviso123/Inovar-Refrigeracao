@@ -229,34 +229,6 @@ class ItemOS(Base):
 
     service_order = relationship("ServiceOrder", back_populates="itens_os")
 
-class WhatsAppInstance(Base):
-    __tablename__ = "whatsapp_instances"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    instance_name = Column(String)
-    instance_key = Column(String, unique=True, index=True)
-    status = Column(String, default="disconnected")
-    qrcode_base64 = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    user = relationship("User")
-
-class Message(Base):
-    __tablename__ = "messages"
-
-    id = Column(Integer, primary_key=True, index=True)
-    instance_id = Column(Integer, ForeignKey("whatsapp_instances.id"))
-    external_id = Column(String, nullable=True)
-    sender_number = Column(String)
-    receiver_number = Column(String)
-    content = Column(Text)
-    direction = Column(String)
-    status = Column(String, default="pending")
-    timestamp = Column(DateTime, default=datetime.utcnow)
-
-    instance = relationship("WhatsAppInstance")
-
 class Notification(Base):
     __tablename__ = "notifications"
 
@@ -270,40 +242,6 @@ class Notification(Base):
     link = Column(String, nullable=True)
 
     user = relationship("User")
-
-class BotConfig(Base):
-    __tablename__ = "bot_config"
-
-    id = Column(String, primary_key=True, default=lambda: "1")
-    bot_nome = Column(String, default="Inovar Bot")
-    ativo = Column(Boolean, default=True)
-    min_delay = Column(Integer, default=15)
-    max_delay = Column(Integer, default=45)
-    hora_inicio = Column(String, default="08:00")
-    hora_fim = Column(String, default="21:00")
-    simular_digitando = Column(Boolean, default=True)
-
-class FilaEnvio(Base):
-    __tablename__ = "fila_envio"
-
-    id = Column(Integer, primary_key=True, index=True)
-    numero = Column(String, nullable=False)
-    mensagem = Column(Text, nullable=False)
-    media_url = Column(String, nullable=True)
-    status = Column(String, default="pendente") # pendente, processando, enviado, erro
-    tentativas = Column(Integer, default=0)
-    erro_log = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    enviado_em = Column(DateTime, nullable=True)
-
-class BotStatus(Base):
-    __tablename__ = "bot_status"
-
-    id = Column(Integer, primary_key=True, default=1)
-    status_conexao = Column(String, default="desconectado") # conectado, desconectado, aguardando_qr
-    qr_code_base64 = Column(Text, nullable=True)
-    pairing_code = Column(String, nullable=True)
-    ultima_atualizacao = Column(DateTime, default=datetime.utcnow)
 
 class ManutencaoAgendada(Base):
     __tablename__ = "manutencoes_agendadas"

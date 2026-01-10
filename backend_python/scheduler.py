@@ -96,47 +96,5 @@ async def check_maintenance_reminders():
 def start_scheduler():
     # Run daily at 09:00 AM
     scheduler.add_job(check_maintenance_reminders, CronTrigger(hour=9, minute=0))
-    # Run queue processor every minute
-    scheduler.add_job(process_whatsapp_queue, 'interval', minutes=1)
     scheduler.start()
-    logger.info("📅 Scheduler started (Daily at 09:00 + Queue every 1m)")
-
-async def process_whatsapp_queue():
-    """
-    Process pending messages in the queue and send them via WPPConnect.
-    """
-    from models import FilaEnvio
-    from services.whatsapp_service import send_message_internal
-    
-    # Create new session
-    with Session(engine) as db:
-        try:
-            # Get pending messages (limit to avoid timeouts)
-            pending_msgs = db.query(FilaEnvio).filter(FilaEnvio.status == 'pendente').limit(10).all()
-            
-            if not pending_msgs:
-                return
-
-            logger.info(f"Processing {len(pending_msgs)} pending WhatsApp messages...")
-            
-            for msg in pending_msgs:
-                try:
-                    # Attempt to send
-                    success = await send_message_internal(msg.numero, msg.mensagem, msg.media_url)
-                    
-                    if success:
-                        msg.status = 'enviado'
-                        msg.enviado_em = datetime.utcnow()
-                    else:
-                        msg.status = 'erro'
-                        # Optional: Increment retry count if you add that field
-                    
-                    db.commit()
-                    
-                except Exception as e:
-                    logger.error(f"Error processing message {msg.id}: {e}")
-                    msg.status = 'erro'
-                    db.commit()
-                    
-        except Exception as e:
-            logger.error(f"Error in process_whatsapp_queue: {e}")
+    logger.info("📅 Scheduler started (Daily maintenance check at 09:00)")

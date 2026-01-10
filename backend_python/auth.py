@@ -84,6 +84,19 @@ def authenticate_user(db: Session, email: str, password: str):
         return False
     return user
 
+def decode_access_token(token: str) -> dict:
+    """
+    Decode and validate a JWT access token
+    Returns the token payload if valid, raises JWTError if invalid
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError as e:
+        logger.error(f"Token decode error: {e}")
+        raise
+
+
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

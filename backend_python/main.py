@@ -31,18 +31,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from auth import router as auth_router
-from routers.whatsapp import router as whatsapp_router
 from solicitacoes import router as solicitacoes_router
 from usuarios import router as usuarios_router
 from dashboard import router as dashboard_router
 from clientes import router as clientes_router
 from extra_routes import router as extra_router
 from equipamentos import router as equipamentos_router
-from whatsapp_engine import brain
 from scheduler import start_scheduler
 from notifications import router as notifications_router
 from routers.manutencao import router as maintenance_router
-from routers.qrcode import router as qrcode_router
+
 
 # Redis Utilities
 from redis_utils import (
@@ -92,12 +90,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": exc.errors(), "body": body_str}
     )
 
-# Configurações de Ambiente
-WHATSAPP_URL = os.getenv("WHATSAPP_URL") or os.getenv("WPPCONNECT_URL", "http://localhost:8081")
-if WHATSAPP_URL and not WHATSAPP_URL.startswith("http"):
-    WHATSAPP_URL = f"http://{WHATSAPP_URL}"
-
 # Middleware Global para Corrigir Erros 405 (HEAD e Slashes)
+
 @app.middleware("http")
 async def fix_405_and_slashes(request: Request, call_next):
     if request.method == "HEAD":
@@ -134,15 +128,8 @@ async def rate_limit_middleware(request: Request, call_next):
     return response
 
 # Inicialização
-@app.on_event("startup")
-async def startup_event():
-    try:
-        print("Starting WhatsApp Brain...")
-        await brain.start()
-    except Exception as e:
-        logger.warning(f"WhatsApp Brain failed to start: {e}")
-
     start_scheduler()
+
 
     try:
         from database import init_db
@@ -228,19 +215,8 @@ def check_storage_health() -> dict:
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
 
-def check_whatsapp_health() -> dict:
-    start = time.time()
-    try:
-        import httpx
-        response = httpx.get(f"{WHATSAPP_URL}/health", timeout=5.0)
-        latency = round((time.time() - start) * 1000, 2)
-        if response.status_code == 200:
-            return {"status": "healthy", "latency_ms": latency}
-        return {"status": "degraded", "status_code": response.status_code}
-    except Exception as e:
-        return {"status": "unavailable", "error": str(e)}
-
 @app.get("/health")
+
 async def health_check_simple():
     """Simple health check for Docker/Render health probes"""
     return {"status": "ok"}
@@ -250,9 +226,9 @@ async def health_check_detailed():
     services = {
         "database": check_database_health(),
         "redis": check_redis_health(),
-        "storage": check_storage_health(),
-        "whatsapp": check_whatsapp_health()
+        "storage": check_storage_health()
     }
+
 
     statuses = [s.get("status", "unknown") for s in services.values()]
     if all(s == "healthy" or s == "disabled" for s in statuses):
@@ -340,7 +316,6 @@ async def upload_file(file: UploadFile = File(...), bucket: str = "os-photos"):
 
 # Include Routers
 app.include_router(auth_router, prefix="/api")
-app.include_router(whatsapp_router)  # Router already has /api/whatsapp prefix
 app.include_router(solicitacoes_router, prefix="/api")
 app.include_router(usuarios_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
@@ -349,7 +324,7 @@ app.include_router(extra_router, prefix="/api")
 app.include_router(equipamentos_router, prefix="/api")
 app.include_router(notifications_router)
 app.include_router(maintenance_router)
-app.include_router(qrcode_router)
+
 
 # WebSocket Notifications
 from fastapi import WebSocket, WebSocketDisconnect
@@ -357,6 +332,7 @@ from websocket_manager import manager as ws_manager
 
 @app.websocket("/ws/notifications")
 async def websocket_notifications(websocket: WebSocket, token: str = None):
+    """WebSocket endpoint for real-time notifications with proper authentication"""
     if not token:
         await websocket.close(code=4001, reason="Token required")
         return
@@ -367,20 +343,29 @@ async def websocket_notifications(websocket: WebSocket, token: str = None):
         from models import User
         from sqlalchemy.orm import Session
 
-        # Note: decode_access_token needs to be handled carefully with Supabase
-        # For now, we assume the token is valid if we get here (simplified)
-        # In a real app, you'd verify the Supabase JWT.
+        # Decode and validate the JWT token
+        try:
+            payload = decode_access_token(token)
+            user_id = payload.get("sub")
+            if not user_id:
+                await websocket.close(code=4001, reason="Invalid token payload")
+                return
+        except Exception as e:
+            logger.error(f"Token validation failed: {e}")
+            await websocket.close(code=4001, reason="Invalid or expired token")
+            return
 
-        # Mock user lookup for now (should use real logic)
+        # Get user from database
         db = next(get_db())
-        # This is a placeholder, should use real token decoding
-        user = db.query(User).first()
+        user = db.query(User).filter(User.id == user_id).first()
 
         if not user:
             await websocket.close(code=4001, reason="User not found")
             return
 
         await ws_manager.connect(websocket, user.id)
+        logger.info(f"WebSocket connected for user {user.id}")
+        
         await websocket.send_json({
             "type": "connected",
             "message": "WebSocket connected successfully",
@@ -394,6 +379,7 @@ async def websocket_notifications(websocket: WebSocket, token: str = None):
                     await websocket.send_json({"type": "pong"})
         except WebSocketDisconnect:
             ws_manager.disconnect(websocket)
+            logger.info(f"WebSocket disconnected for user {user.id}")
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")

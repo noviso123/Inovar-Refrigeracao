@@ -1,194 +1,209 @@
-# Supabase CLI
+# Inovar Refrigeração - Sistema de Gestão
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
-](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
+Sistema completo de gestão para empresas de refrigeração, incluindo gerenciamento de clientes, ordens de serviço, equipamentos, técnicos, e integração com WhatsApp.
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+## 🚀 Tecnologias
 
-This repository contains all the functionality for Supabase CLI.
+### Backend
+- **Python 3.11+** com FastAPI
+- **Supabase** (PostgreSQL) para banco de dados
+- **Supabase Storage** para armazenamento de arquivos
+- **APScheduler** para agendamento de tarefas
+- **Redis** para cache e rate limiting (opcional)
+- **WebSockets** para notificações em tempo real
 
-- [x] Running Supabase locally
-- [x] Managing database migrations
-- [x] Creating and deploying Supabase Functions
-- [x] Generating types directly from your database schema
-- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
+### Frontend
+- **SvelteKit** com TypeScript
+- **TailwindCSS** para estilização
+- **Vite** como bundler
 
-## Getting started
+## 📋 Pré-requisitos
 
-### Install the CLI
+- Python 3.11 ou superior
+- Node.js 18 ou superior
+- npm ou pnpm
+- Conta Supabase (para banco de dados e storage)
 
-Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
+## 🔧 Instalação
 
-```bash
-npm i supabase --save-dev
-```
-
-When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
-
-```
-NODE_OPTIONS=--no-experimental-fetch yarn add supabase
-```
-
-> **Note**
-For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
-
-<details>
-  <summary><b>macOS</b></summary>
-
-  Available via [Homebrew](https://brew.sh). To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To install the beta release channel:
-
-  ```sh
-  brew install supabase/tap/supabase-beta
-  brew link --overwrite supabase-beta
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Supabase Reference</b></summary>
-
-- **Monolithic Architecture**: Single-tenant, offline-first design.
-- **Supabase Integration**: Managed Database (PostgreSQL) and Storage (S3-compatible).
-- **Automated Setup**: `setup-offline.ps1` for one-click environment preparation.
-- **Zero Docker**: Pure Python/Node.js stack for maximum portability.
-
-## 🚀 Quick Start in 3 Steps
-
-1. **Setup**: Run `powershell -ExecutionPolicy Bypass -File setup-offline.ps1`
-2. **Backend**: `cd backend_python` -> `python main.py`
-3. **Frontend**: `cd frontend` -> `npm run dev`
-
-> **Note**: Full Supabase credentials are in `SUPABASE_GUIDE.md`. The `.env` file is auto-configured.
-</details>
-
-<details>
-  <summary><b>Windows</b></summary>
-
-  Available via [Scoop](https://scoop.sh). To install:
-
-  ```powershell
-  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-  scoop install supabase
-  ```
-
-  To upgrade:
-
-  ```powershell
-  scoop update supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Linux</b></summary>
-
-  Available via [Homebrew](https://brew.sh) and Linux packages.
-
-  #### via Homebrew
-
-  To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-
-  #### via Linux packages
-
-  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
-
-  ```sh
-  sudo apk add --allow-untrusted <...>.apk
-  ```
-
-  ```sh
-  sudo dpkg -i <...>.deb
-  ```
-
-  ```sh
-  sudo rpm -i <...>.rpm
-  ```
-
-  ```sh
-  sudo pacman -U <...>.pkg.tar.zst
-  ```
-</details>
-
-<details>
-  <summary><b>Other Platforms</b></summary>
-
-  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
-
-  ```sh
-  go install github.com/supabase/cli@latest
-  ```
-
-  Add a symlink to the binary in `$PATH` for easier access:
-
-  ```sh
-  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
-  ```
-
-  This works on other non-standard Linux distros.
-</details>
-
-<details>
-  <summary><b>Community Maintained Packages</b></summary>
-
-  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
-  To install in your working directory:
-
-  ```bash
-  pkgx install supabase
-  ```
-
-  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
-</details>
-
-### Run the CLI
+### 1. Clone o repositório
 
 ```bash
-supabase bootstrap
+git clone <repository-url>
+cd "Inovar Refrigeracao"
 ```
 
-Or using npx:
+### 2. Configure o Backend
 
 ```bash
-npx supabase bootstrap
+cd backend_python
+
+# Crie um ambiente virtual
+python -m venv .venv
+
+# Ative o ambiente virtual
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
+source .venv/bin/activate
+
+# Instale as dependências
+pip install -r requirements.txt
+
+# Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o .env com suas credenciais do Supabase
 ```
 
-The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+### 3. Configure o Frontend
 
-## Docs
+```bash
+cd frontend-svelte
 
-Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+# Instale as dependências
+npm install
 
-## Breaking changes
-
-We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
-
-However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
-
-## Developing
-
-To run from source:
-
-```sh
-# Go >= 1.22
-go run . help
+# Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o .env com a URL da API
 ```
+
+## ▶️ Executando Localmente
+
+### Backend
+
+```bash
+cd backend_python
+python main.py
+```
+
+O backend estará disponível em `http://localhost:8001`
+
+- API Docs: `http://localhost:8001/docs`
+- Health Check: `http://localhost:8001/health`
+
+### Frontend
+
+```bash
+cd frontend-svelte
+npm run dev
+```
+
+O frontend estará disponível em `http://localhost:5173`
+
+## 📁 Estrutura do Projeto
+
+```
+Inovar Refrigeracao/
+├── backend_python/          # Backend FastAPI
+│   ├── routers/            # Endpoints da API
+│   ├── services/           # Lógica de negócio
+│   ├── models.py           # Modelos do SQLAlchemy
+│   ├── database.py         # Configuração do banco
+│   ├── auth.py             # Autenticação
+│   └── main.py             # Ponto de entrada
+├── frontend-svelte/        # Frontend SvelteKit
+│   ├── src/
+│   │   ├── routes/        # Páginas
+│   │   ├── lib/           # Componentes e serviços
+│   │   └── types/         # Tipos TypeScript
+│   └── static/            # Arquivos estáticos
+├── scripts/               # Scripts utilitários
+├── supabase/              # Configurações Supabase
+├── Dockerfile             # Docker para deploy
+└── README.md              # Este arquivo
+```
+
+## 🗃️ Configuração do Supabase
+
+### Variáveis de Ambiente Necessárias
+
+**Backend (.env):**
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_KEY=your_service_key
+DATABASE_URL=your_database_url
+SECRET_KEY=your_secret_key
+```
+
+**Frontend (.env):**
+```env
+PUBLIC_API_URL=http://localhost:8001
+PUBLIC_SUPABASE_URL=your_supabase_url
+PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+### Inicialização do Banco de Dados
+
+O backend irá criar as tabelas automaticamente na primeira execução. Certifique-se de que as credenciais do Supabase estão corretas.
+
+## 🚀 Deploy
+
+### Railway (Recomendado)
+
+O projeto está configurado para deploy no Railway:
+
+1. Conecte seu repositório ao Railway
+ 2. Configure as variáveis de ambiente
+3. O Railway usará o `Dockerfile` na raiz do projeto
+4. Deploy automático a cada push
+
+### Docker
+
+```bash
+# Build da imagem
+docker build -t inovar-refrigeracao .
+
+# Execute o container
+docker run -p 8001:8001 --env-file .env inovar-refrigeracao
+```
+
+## 🔑 Funcionalidades Principais
+
+- ✅ **Gestão de Clientes** - CRUD completo com histórico
+- ✅ **Ordens de Serviço** - Criação, edição, e acompanhamento
+- ✅ **Gestão de Equipamentos** - Cadastro e manutenção
+- ✅ **Técnicos** - Gerenciamento de equipe
+- ✅ **WhatsApp Integration** - Notificações automáticas
+- ✅ **Dashboard** - Métricas e relatórios
+- ✅ **Upload de Imagens** - Fotos de serviços e assinaturas
+- ✅ **Notificações em Tempo Real** - Via WebSocket
+- ✅ **Agendamento** - Lembretes de manutenção automáticos
+
+## 🧪 Testes
+
+```bash
+# Backend
+cd backend_python
+pytest
+
+# Frontend
+cd frontend-svelte
+npm run test
+```
+
+## 📝 API Documentation
+
+Com o backend rodando, acesse:
+- **Swagger UI**: `http://localhost:8001/docs`
+- **ReDoc**: `http://localhost:8001/redoc`
+
+## 🤝 Contribuindo
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto é privado e proprietário da Inovar Refrigeração.
+
+## 🆘 Suporte
+
+Para suporte, entre em contato com a equipe de desenvolvimento.
+
+---
+
+**Desenvolvido com ❄️ pela equipe Inovar Refrigeração**

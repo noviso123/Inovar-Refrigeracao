@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from database import get_db
-from models import ServiceOrder, ItemOS, User, Client, Location, Equipment, FilaEnvio
+from models import ServiceOrder, ItemOS, User, Client, Location, Equipment
+
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -327,49 +328,3 @@ def get_order_pix(order_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Erro ao gerar payload PIX")
 
     return {"pix_payload": pix_payload}
-
-@router.post("/solicitacoes/{order_id}/send-whatsapp")
-def send_order_whatsapp(order_id: int, type: str = "pdf", db: Session = Depends(get_db)):
-    from models import SystemSettings
-    order = db.query(ServiceOrder).filter(ServiceOrder.id == order_id).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="OS não encontrada")
-
-    settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
-    if not order.client.phone:
-        raise HTTPException(status_code=400, detail="Cliente não possui telefone cadastrado")
-
-    # Limpar número de telefone
-    phone = "".join(filter(str.isdigit, order.client.phone))
-    if not phone.startswith("55"): phone = f"55{phone}"
-
-    if type == "pdf":
-        msg = f"*Olá {order.client.name}!* Segue em anexo a sua Ordem de Serviço #{order.sequential_id}.\n\nPara qualquer dúvida, estamos à disposição."
-        # Por agora, enviamos apenas o texto. No futuro, upload para S3/Supabase e enviar media_url.
-        media_url = None
-    elif type == "pix":
-        if not settings or not settings.pix_key:
-             raise HTTPException(status_code=400, detail="Chave PIX não configurada")
-
-        pix_payload = generate_pix_payload(
-            chave_pix=settings.pix_key,
-            valor=order.valor_total,
-            nome_recebedor=settings.business_name,
-            cidade_recebedor=settings.cidade or "SAO PAULO",
-            txt_id=f"OS{order.sequential_id}"
-        )
-        msg = f"*Olá {order.client.name}!* Segue o código PIX para pagamento da OS #{order.sequential_id}:\n\n`{pix_payload}`\n\n*Valor:* R$ {order.valor_total:.2f}"
-        media_url = None
-    else:
-        raise HTTPException(status_code=400, detail="Tipo de documento inválido")
-
-    # Enfileirar
-    new_msg = FilaEnvio(
-        numero=phone,
-        mensagem=msg,
-        media_url=media_url
-    )
-    db.add(new_msg)
-    db.commit()
-
-    return {"message": f"Mensagem de {type} enfileirada para envio via WhatsApp"}
