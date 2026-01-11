@@ -38,7 +38,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ (Removed to avoid conflict with frontend src/lib)
+!frontend-svelte/src/lib/
 lib64/
 parts/
 sdist/
