@@ -10,7 +10,7 @@ const config = {
 	kit: {
 		// Use Vercel adapter with split: false to use a single function (avoids 12 function limit)
 		// Explicitly set runtime to nodejs20.x to avoid version conflicts
-		// Use adapter-static for Railway (FastAPI serving)
+		// Use adapter-static for static export
 		adapter: adapter({
 			pages: 'build',
 			assets: 'build',

@@ -242,17 +242,6 @@ def check_storage_health() -> dict:
              return {"status": "healthy", "provider": "ImgBB", "latency_ms": latency}
         return {"status": "degraded", "code": response.status_code}
     except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
-
-@app.get("/health")
-
-async def health_check_simple():
-    """Simple health check for Docker/Render health probes"""
-    return {"status": "ok"}
-
-@app.api_route("/api/health", methods=["GET", "HEAD"])
-async def health_check_detailed():
-    services = {
         "database": check_database_health(),
         "redis": check_redis_health(),
         "storage": check_storage_health()
