@@ -139,24 +139,34 @@ O backend irá criar as tabelas automaticamente na primeira execução. Certifiq
 
 ## 🚀 Deploy
 
-### Railway (Recomendado)
+Para deploy em produção, recomendamos usar plataformas que suportem Python nativo como:
+- **Vercel** (com serverless functions)
+- **Heroku**
+- **DigitalOcean App Platform**
+- **AWS Elastic Beanstalk**
 
-O projeto está configurado para deploy no Railway:
+### Configuração Necessária
 
-1. Conecte seu repositório ao Railway
- 2. Configure as variáveis de ambiente
-3. O Railway usará o `Dockerfile` na raiz do projeto
-4. Deploy automático a cada push
+Certifique-se de configurar as seguintes variáveis de ambiente:
+- `DATABASE_URL` - URL de conexão do Supabase
+- `SUPABASE_URL` - URL do projeto Supabase
+- `SUPABASE_SERVICE_KEY` - Service Role Key
+- `SECRET_KEY` - Chave secreta para JWT (use um valor único e seguro)
+- `ENV=production` - Indica ambiente de produção
 
-### Docker
+### Build do Frontend
 
-```bash
-# Build da imagem
-docker build -t inovar-refrigeracao .
+Antes do deploy, execute o script de build do frontend:
 
-# Execute o container
-docker run -p 8001:8001 --env-file .env inovar-refrigeracao
+```powershell
+# Windows
+.\build_frontend.ps1
+
+# Linux/Mac
+./build_frontend.sh
 ```
+
+Isso criará os arquivos estáticos em `backend_python/static/` que serão servidos pelo backend.
 
 ## 🔑 Funcionalidades Principais
 
