@@ -19,3 +19,24 @@ export const isAdmin = derived(user, ($user) => $user?.role === 'admin');
 export const setUser = (userData: User | null) => {
     user.set(userData);
 };
+
+// Token store
+export const token = writable<string | null>(null);
+
+// Helper to set token
+export const setToken = (tokenData: string | null) => {
+    token.set(tokenData);
+    if (tokenData) {
+        localStorage.setItem('token', tokenData);
+    } else {
+        localStorage.removeItem('token');
+    }
+};
+
+// Initialize token from localStorage if available (client-side only)
+if (typeof window !== 'undefined') {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+        token.set(storedToken);
+    }
+}
