@@ -40,6 +40,7 @@ from equipamentos import router as equipamentos_router
 from scheduler import start_scheduler
 from notifications import router as notifications_router
 from routers.manutencao import router as maintenance_router
+from routers.cron import router as cron_router
 
 
 # Redis Utilities
@@ -91,12 +92,12 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"⚠️ Config validation skipped: {e}")
     
-    # Start Scheduler
-    try:
-        start_scheduler()
-        logger.info("✅ Scheduler started successfully")
-    except Exception as e:
-        logger.error(f"❌ Scheduler start failed: {e}")
+    # Start Scheduler - DISABLED FOR VERCEL (Using Cron Jobs)
+    # try:
+    #     start_scheduler()
+    #     logger.info("✅ Scheduler started successfully")
+    # except Exception as e:
+    #     logger.error(f"❌ Scheduler start failed: {e}")
     
     # Initialize Database
     try:
@@ -342,6 +343,7 @@ app.include_router(extra_router, prefix="/api")
 app.include_router(equipamentos_router, prefix="/api")
 app.include_router(notifications_router)
 app.include_router(maintenance_router)
+app.include_router(cron_router, prefix="/api")
 
 
 # WebSocket Notifications

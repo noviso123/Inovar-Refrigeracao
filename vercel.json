@@ -1,0 +1,32 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "backend_python/main.py",
+            "use": "@vercel/python"
+        },
+        {
+            "src": "frontend-svelte/package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "build"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "/backend_python/main.py"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/frontend-svelte/$1"
+        }
+    ],
+    "crons": [
+        {
+            "path": "/api/cron/maintenance-reminders",
+            "schedule": "0 9 * * *"
+        }
+    ]
+}

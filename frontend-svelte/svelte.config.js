@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-vercel';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -11,13 +11,7 @@ const config = {
 		// Use Vercel adapter with split: false to use a single function (avoids 12 function limit)
 		// Explicitly set runtime to nodejs20.x to avoid version conflicts
 		// Use adapter-static for static export
-		adapter: adapter({
-			pages: 'build',
-			assets: 'build',
-			fallback: 'index.html',
-			precompress: false,
-			strict: true
-		}),
+		adapter: adapter(),
 
 		// Alias for easier imports
 		alias: {
