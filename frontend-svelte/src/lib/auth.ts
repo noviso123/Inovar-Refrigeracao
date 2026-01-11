@@ -40,3 +40,23 @@ if (typeof window !== 'undefined') {
         token.set(storedToken);
     }
 }
+
+export const isAuthenticated = derived(token, ($token) => !!$token);
+
+export const logout = () => {
+    token.set(null);
+    user.set(null);
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+    }
+};
+
+export const initAuth = async () => {
+    if (typeof window === 'undefined') return;
+
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+        token.set(storedToken);
+        // Optional: Fetch user profile here if needed
+    }
+};
