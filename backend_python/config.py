@@ -34,6 +34,19 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
+# Check if using default SECRET_KEY in production
+if SECRET_KEY == "your-secret-key-change-in-production":
+    ENV = os.getenv("ENV", "development").lower()
+    if ENV == "production" or not DEBUG:
+        import logging
+        logging.critical("❌ CRITICAL SECURITY ERROR: Using default SECRET_KEY in production!")
+        logging.critical("❌ Set SECRET_KEY environment variable immediately!")
+        import sys
+        sys.exit(1)
+    else:
+        import logging
+        logging.warning("⚠️ Using default SECRET_KEY (OK for development only)")
+
 # =============================================================================
 # STORAGE CONFIGURATION
 # =============================================================================
@@ -93,6 +106,9 @@ RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
 
 def validate_config() -> bool:
     """Validate that all critical configuration is present"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     critical_vars = {
         "DATABASE_URL": DATABASE_URL,
         "SECRET_KEY": SECRET_KEY,
@@ -101,13 +117,13 @@ def validate_config() -> bool:
     missing = [key for key, value in critical_vars.items() if not value]
     
     if missing:
-        print(f"❌ Missing critical environment variables: {', '.join(missing)}")
+        logger.error(f"❌ Missing critical environment variables: {', '.join(missing)}")
         return False
     
     if SECRET_KEY == "your-secret-key-change-in-production":
-        print("⚠️ WARNING: Using default SECRET_KEY. Change this in production!")
+        logger.warning("⚠️ WARNING: Using default SECRET_KEY. Change this in production!")
     
-    print("✅ Configuration validated successfully")
+    logger.info("✅ Configuration validated successfully")
     return True
 
 def get_storage_info() -> dict:

@@ -12,17 +12,42 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Redis Connection
+# Priority: 1. REDIS_URL (full connection string), 2. Individual parameters
 REDIS_URL = os.getenv("REDIS_URL", "")
 
-try:
-    redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-    redis_client.ping()
-    REDIS_AVAILABLE = True
-    logger.info("✅ Redis conectado com sucesso")
-except Exception as e:
-    logger.warning(f"⚠️ Redis não disponível: {e}")
-    redis_client = None
-    REDIS_AVAILABLE = False
+redis_client = None
+REDIS_AVAILABLE = False
+
+if REDIS_URL:
+    # Use REDIS_URL if provided (highest priority)
+    try:
+        redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+        redis_client.ping()
+        REDIS_AVAILABLE = True
+        logger.info("✅ Redis connected via REDIS_URL")
+    except Exception as e:
+        logger.warning(f"⚠️ Redis connection failed (REDIS_URL): {e}")
+else:
+    # Fallback to individual parameters
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
+    
+    try:
+        redis_client = redis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            password=REDIS_PASSWORD if REDIS_PASSWORD else None,
+            decode_responses=True
+        )
+        redis_client.ping()
+        REDIS_AVAILABLE = True
+        logger.info(f"✅ Redis connected via parameters ({REDIS_HOST}:{REDIS_PORT})")
+    except Exception as e:
+        logger.warning(f"⚠️ Redis not available (no valid config): {e}")
+
+if not REDIS_AVAILABLE:
+    logger.info("ℹ️ Rate limiting and caching disabled (Redis not configured)")
 
 # ==========================================
 # CACHE UTILITIES

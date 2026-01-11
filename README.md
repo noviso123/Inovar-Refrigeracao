@@ -13,7 +13,7 @@ Sistema completo de gestão para empresas de refrigeração, incluindo gerenciam
 - **WebSockets** para notificações em tempo real
 
 ### Frontend
-- **SvelteKit** com TypeScript
+- **SvelteKit** com JavaScript puro
 - **TailwindCSS** para estilização
 - **Vite** como bundler
 
@@ -106,7 +106,7 @@ Inovar Refrigeracao/
 │   ├── src/
 │   │   ├── routes/        # Páginas
 │   │   ├── lib/           # Componentes e serviços
-│   │   └── types/         # Tipos TypeScript
+│   │   └── stores/        # Svelte stores
 │   └── static/            # Arquivos estáticos
 ├── scripts/               # Scripts utilitários
 ├── supabase/              # Configurações Supabase
@@ -164,7 +164,7 @@ docker run -p 8001:8001 --env-file .env inovar-refrigeracao
 - ✅ **Ordens de Serviço** - Criação, edição, e acompanhamento
 - ✅ **Gestão de Equipamentos** - Cadastro e manutenção
 - ✅ **Técnicos** - Gerenciamento de equipe
-- ✅ **WhatsApp Integration** - Notificações automáticas
+- ✅ **Sistema de Notificações** - Notificações em tempo real via WebSocket
 - ✅ **Dashboard** - Métricas e relatórios
 - ✅ **Upload de Imagens** - Fotos de serviços e assinaturas
 - ✅ **Notificações em Tempo Real** - Via WebSocket

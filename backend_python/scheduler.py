@@ -61,40 +61,56 @@ async def check_maintenance_reminders():
                     due_date = base_date + timedelta(days=interval * 30)
                     
                     if datetime.utcnow() > due_date:
-                        # 5. Prevent duplicate reminders
-                        clean_phone = "".join(filter(str.isdigit, client.phone))
+                        # 5. Prevent duplicate notifications within 20 days
+                        from models import Notification
                         
-                        recent_reminder = db.execute(text(
-                            "SELECT id FROM fila_envio WHERE numero = :num AND created_at > :limit"
-                        ), {
-                            "num": clean_phone,
-                            "limit": datetime.utcnow() - timedelta(days=20)
-                        }).fetchone()
+                        recent_notification = db.query(Notification).filter(
+                            Notification.type == "maintenance_reminder",
+                            Notification.message.contains(client.name),
+                            Notification.created_at > (datetime.utcnow() - timedelta(days=20))
+                        ).first()
 
-                        if recent_reminder:
+                        if recent_notification:
                             continue
 
-                        # 6. Enqueue message
+                        # 6. Create notification for maintenance reminder
                         msg = template_msg.replace("{cliente}", client.name).replace("{data}", due_date.strftime("%d/%m/%Y"))
                         
-                        db.execute(text(
-                            "INSERT INTO fila_envio (numero, mensagem, status, created_at) VALUES (:num, :msg, 'pendente', :now)"
-                        ), {
-                            "num": clean_phone,
-                            "msg": msg,
-                            "now": datetime.utcnow()
-                        })
+                        notification = Notification(
+                            user_id=None,  # System notification (visible to all admins)
+                            title="Lembrete de Manutenção",
+                            message=f"Cliente: {client.name} | {msg}",
+                            type="maintenance_reminder",
+                            link=f"/clientes/{client.id}"
+                        )
+                        db.add(notification)
                         db.commit()
-                        logger.info(f"Maintenance reminder enqueued for {client.name} ({clean_phone})")
+                        
+                        logger.info(f"✅ Maintenance reminder created for {client.name} (phone: {client.phone})")
 
         except Exception as e:
-            logger.error(f"Error in check_maintenance_reminders: {e}")
+            logger.error(f"❌ Error in check_maintenance_reminders: {e}")
             db.rollback()
 
+    logger.info("=" * 50)
+    logger.info("=" * 50)
     logger.info("✅ Maintenance Check Complete.")
 
 def start_scheduler():
+    """
+    Start the AsyncIOScheduler for background tasks.
+    Runs maintenance reminder checks daily at 09:00 AM.
+    """
     # Run daily at 09:00 AM
-    scheduler.add_job(check_maintenance_reminders, CronTrigger(hour=9, minute=0))
+    scheduler.add_job(
+        check_maintenance_reminders, 
+        CronTrigger(hour=9, minute=0),
+        id="maintenance_reminders",
+        replace_existing=True,
+        misfire_grace_time=3600  # Allow 1 hour grace period for missed jobs
+    )
+    
     scheduler.start()
-    logger.info("📅 Scheduler started (Daily maintenance check at 09:00)")
+    logger.info("📅 Scheduler started successfully")
+    logger.info("📅 Maintenance check scheduled for daily at 09:00 AM")
+    logger.info("=" * 50)

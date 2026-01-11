@@ -20,23 +20,8 @@ logger = logging.getLogger(__name__)
 # Router
 router = APIRouter()
 
-# Configuração Supabase
-from dotenv import load_dotenv
-load_dotenv()
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    # Fallback for build time or testing without envs
-    print("⚠️ Supabase Credentials missing in backend!")
-
-from supabase import create_client, Client
-try:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception as e:
-    print(f"⚠️ Error initializing Supabase client: {e}")
-    supabase = None
+# Note: Supabase is used for database and storage only
+# Authentication is handled via local JWT tokens
 
 # Local Auth Implementation
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-it")
@@ -98,41 +83,44 @@ def decode_access_token(token: str) -> dict:
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Validate JWT token and return the current authenticated user.
+    Uses only local JWT authentication (no Supabase Auth).
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Não foi possível validar as credenciais",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    email = None
-    
-    # Primeiro, tentar decodificar como JWT local
     try:
+        # Decode JWT token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get("sub")
-        if email:
-            logger.info(f"Token local validado para: {email}")
+        email: str = payload.get("sub")
+        
+        if email is None:
+            logger.warning("Token válido mas sem email (sub)")
+            raise credentials_exception
+            
+        logger.debug(f"Token validado para: {email}")
+        
     except JWTError as e:
-        logger.debug(f"Não é um token local, tentando Supabase: {e}")
-    
-    # Se não conseguiu via JWT local, tentar Supabase
-    if not email and supabase:
-        try:
-            res = supabase.auth.get_user(token)
-            if res and res.user:
-                email = res.user.email
-                logger.info(f"Token Supabase validado para: {email}")
-        except Exception as e:
-            logger.debug(f"Erro ao verificar token no Supabase: {e}")
-    
-    if not email:
-        logger.warning("Nenhum método de autenticação conseguiu validar o token")
+        logger.warning(f"Falha na validação do token JWT: {e}")
         raise credentials_exception
 
+    # Get user from database
     user = db.query(User).filter(User.email == email).first()
     if user is None:
-        logger.warning(f"Usuário não encontrado no banco local: {email}")
+        logger.warning(f"Usuário não encontrado no banco: {email}")
         raise credentials_exception
+        
+    if not user.is_active:
+        logger.warning(f"Usuário inativo tentou acessar: {email}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário inativo"
+        )
+    
     return user
 
 

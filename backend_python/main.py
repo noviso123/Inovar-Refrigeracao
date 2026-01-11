@@ -73,6 +73,67 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Startup Event - Initialize all backend services
+@app.on_event("startup")
+async def startup_event():
+    """Initialize all backend services on application startup"""
+    logger.info("=" * 60)
+    logger.info("🚀 Starting Inovar Refrigeração Backend Initialization...")
+    logger.info("=" * 60)
+    
+    # Validate Configuration
+    try:
+        from config import validate_config
+        if not validate_config():
+            logger.critical("❌ Configuration validation failed!")
+            import sys
+            sys.exit(1)
+    except Exception as e:
+        logger.warning(f"⚠️ Config validation skipped: {e}")
+    
+    # Start Scheduler
+    try:
+        start_scheduler()
+        logger.info("✅ Scheduler started successfully")
+    except Exception as e:
+        logger.error(f"❌ Scheduler start failed: {e}")
+    
+    # Initialize Database
+    try:
+        from database import init_db
+        init_db()
+        logger.info("✅ Database initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Database initialization failed: {e}")
+    
+    # Initialize Supabase Storage
+    try:
+        from supabase_storage import init_storage_buckets, SUPABASE_SERVICE_KEY
+        if SUPABASE_SERVICE_KEY:
+            await init_storage_buckets()
+            logger.info("✅ Supabase Storage initialized")
+        else:
+            logger.warning("⚠️ Supabase Storage not configured (no service key)")
+            if os.getenv("IMGBB_API_KEY"):
+                logger.info("ℹ️ ImgBB configured as fallback storage")
+            else:
+                logger.warning("⚠️ No storage provider configured! Uploads will use Base64")
+    except Exception as e:
+        logger.warning(f"⚠️ Supabase Storage init failed: {e}")
+    
+    # Initialize WebSocket Manager
+    try:
+        from websocket_manager import manager as ws_mgr
+        from notification_service import set_ws_manager
+        set_ws_manager(ws_mgr)
+        logger.info("✅ WebSocket notification broadcasting enabled")
+    except Exception as e:
+        logger.warning(f"⚠️ WebSocket manager init failed: {e}")
+    
+    logger.info("=" * 60)
+    logger.info("✅ Backend initialization complete!")
+    logger.info("=" * 60)
+
 # Exception Handlers
 from fastapi.exceptions import RequestValidationError
 
@@ -127,40 +188,8 @@ async def rate_limit_middleware(request: Request, call_next):
     response.headers["X-RateLimit-Remaining"] = str(remaining)
     return response
 
-# Inicialização
-    start_scheduler()
 
-
-    try:
-        from database import init_db
-        init_db()
-        logger.info("Tabelas do banco de dados verificadas/criadas.")
-    except Exception as e:
-        logger.error(f"Erro ao conectar/criar banco: {e}")
-
-    # Initialize Supabase Storage buckets
-    try:
-        from supabase_storage import init_storage_buckets, SUPABASE_SERVICE_KEY
-        if SUPABASE_SERVICE_KEY:
-            await init_storage_buckets()
-            logger.info("Supabase Storage buckets initialized.")
-        else:
-            logger.warning("Supabase Storage not configured (no service key).")
-            if os.getenv("IMGBB_API_KEY"):
-                logger.info("ImgBB configured as fallback storage.")
-            else:
-                logger.warning("No storage provider configured! Uploads will use Base64.")
-    except Exception as e:
-        logger.warning(f"Supabase Storage init failed: {e}")
-
-    try:
-        from websocket_manager import manager as ws_mgr
-        from notification_service import set_ws_manager
-        set_ws_manager(ws_mgr)
-        logger.info("WebSocket notification broadcasting enabled")
-    except Exception as e:
-        logger.warning(f"WebSocket manager init failed: {e}")
-
+# WebSocket Notifications
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return Response(status_code=204)
@@ -332,7 +361,24 @@ from websocket_manager import manager as ws_manager
 
 @app.websocket("/ws/notifications")
 async def websocket_notifications(websocket: WebSocket, token: str = None):
-    """WebSocket endpoint for real-time notifications with proper authentication"""
+    """WebSocket endpoint for real-time notifications with authentication and CORS validation"""
+    
+    # Validate origin (CORS for WebSocket)
+    origin = websocket.headers.get("origin")
+    allowed_origins = ["http://localhost:5173", "http://localhost:8001", "http://127.0.0.1:5173", "http://127.0.0.1:8001"]
+    
+    # In production, also allow deployed domains
+    if os.getenv("ENV") == "production":
+        frontend_url = os.getenv("FRONTEND_URL")
+        if frontend_url:
+            allowed_origins.append(frontend_url)
+    
+    if origin and origin not in allowed_origins and origin != "null":
+        logger.warning(f"WebSocket connection rejected from unauthorized origin: {origin}")
+        await websocket.close(code=4003, reason="Unauthorized origin")
+        return
+    
+    # Validate token
     if not token:
         await websocket.close(code=4001, reason="Token required")
         return
@@ -357,14 +403,14 @@ async def websocket_notifications(websocket: WebSocket, token: str = None):
 
         # Get user from database
         db = next(get_db())
-        user = db.query(User).filter(User.id == user_id).first()
+        user = db.query(User).filter(User.email == user_id).first()
 
         if not user:
             await websocket.close(code=4001, reason="User not found")
             return
 
         await ws_manager.connect(websocket, user.id)
-        logger.info(f"WebSocket connected for user {user.id}")
+        logger.info(f"WebSocket connected for user {user.id} from origin {origin}")
         
         await websocket.send_json({
             "type": "connected",

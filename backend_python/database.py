@@ -2,6 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # URL de conexão
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
@@ -10,7 +13,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-print(f"Database Config: {DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else 'sqlite'}")
+logger.info(f"Database Config: {DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else 'sqlite'}")
 
 # Configuração do Engine
 if "sqlite" in DATABASE_URL:
@@ -46,9 +49,9 @@ def init_db():
     from models import Base
     try:
         Base.metadata.create_all(bind=engine)
-        print("Tables created/verified.")
+        logger.info("✅ Tables created/verified successfully")
     except Exception as e:
-        print(f"Error creating tables: {e}")
+        logger.error(f"❌ Error creating tables: {e}")
 
     # Inserir SystemSettings padrão se não existir
     db = next(get_db())
@@ -62,9 +65,9 @@ def init_db():
             )
             db.add(settings)
             db.commit()
-            print("SystemSettings padrão criado.")
+            logger.info("✅ Default SystemSettings created")
     except Exception as e:
-        print(f"Erro ao inicializar settings: {e}")
+        logger.error(f"❌ Error initializing settings: {e}")
         db.rollback()
     finally:
         db.close()
