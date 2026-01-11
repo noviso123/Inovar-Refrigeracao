@@ -4,7 +4,7 @@ from sqlalchemy import func
 from database import get_db
 from models import ServiceOrder, ItemOS, User, Client, Location, Equipment
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from redis_utils import get_cache, set_cache, delete_cache
@@ -20,7 +20,6 @@ from pdf_utils import generate_os_pdf
 from fastapi.responses import Response
 
 # Schemas
-from pydantic import BaseModel, Field, ConfigDict
 
 class ItemOSSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -63,7 +62,7 @@ def list_orders(db: Session = Depends(get_db)):
     orders = db.query(ServiceOrder).options(
         joinedload(ServiceOrder.client),
         joinedload(ServiceOrder.location),
-        joinedload(ServiceOrder.tecnico)
+        joinedload(ServiceOrder.user)
     ).all()
     # Manual mapping for response to match keys in ServiceOrderResponse
     return [
@@ -83,7 +82,7 @@ def list_orders(db: Session = Depends(get_db)):
             "valor_total": o.valor_total,
             "client_name": o.client.name if o.client else None,
             "location_name": o.location.nickname if o.location else None,
-            "technician_name": o.tecnico.full_name if o.tecnico else None
+            "technician_name": o.user.full_name if o.user else None
         }
         for o in orders
     ]
@@ -93,7 +92,7 @@ def list_my_orders(current_user: User = Depends(get_current_user), db: Session =
     orders = db.query(ServiceOrder).filter(ServiceOrder.user_id == current_user.id).options(
         joinedload(ServiceOrder.client),
         joinedload(ServiceOrder.location),
-        joinedload(ServiceOrder.tecnico)
+        joinedload(ServiceOrder.user)
     ).all()
     return [
         {
@@ -112,7 +111,7 @@ def list_my_orders(current_user: User = Depends(get_current_user), db: Session =
             "valor_total": o.valor_total,
             "client_name": o.client.name if o.client else None,
             "location_name": o.location.nickname if o.location else None,
-            "technician_name": o.tecnico.full_name if o.tecnico else None
+            "technician_name": o.user.full_name if o.user else None
         }
         for o in orders
     ]

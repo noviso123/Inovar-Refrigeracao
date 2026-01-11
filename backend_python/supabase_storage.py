@@ -7,6 +7,9 @@ import httpx
 from typing import Optional
 import uuid
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Supabase Configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://apntpretjodygczbeozk.supabase.co")
@@ -77,11 +80,11 @@ async def upload_file(
                     "provider": "supabase"
                 }
             else:
-                print(f"Supabase Storage upload failed: {response.status_code} - {response.text}")
+                logger.warning(f"Supabase Storage upload failed: {response.status_code} - {response.text}")
                 return None
                 
     except Exception as e:
-        print(f"Supabase Storage error: {e}")
+        logger.error(f"Supabase Storage error: {e}")
         return None
 
 
@@ -106,7 +109,7 @@ async def delete_file(bucket: str, filename: str) -> bool:
             response = await client.delete(storage_url, headers=get_headers())
             return response.status_code in [200, 204]
     except Exception as e:
-        print(f"Supabase Storage delete error: {e}")
+        logger.error(f"Supabase Storage delete error: {e}")
         return False
 
 
@@ -154,7 +157,7 @@ async def create_bucket_if_not_exists(bucket_name: str, public: bool = True) -> 
             return response.status_code in [200, 201]
             
     except Exception as e:
-        print(f"Bucket creation error: {e}")
+        logger.error(f"Bucket creation error: {e}")
         return False
 
 
@@ -163,4 +166,4 @@ async def init_storage_buckets():
     for bucket_name in BUCKETS.values():
         success = await create_bucket_if_not_exists(bucket_name, public=True)
         status = "OK" if success else "FAILED"
-        print(f"[{status}] Bucket '{bucket_name}' initialization")
+        logger.info(f"[{status}] Bucket '{bucket_name}' initialization")

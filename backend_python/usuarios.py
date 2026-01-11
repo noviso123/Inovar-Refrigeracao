@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
 from models import User
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from redis_utils import get_cache, set_cache, delete_cache
 import logging
@@ -14,7 +14,6 @@ router = APIRouter()
 
 from auth import get_current_user, get_password_hash
 
-from pydantic import BaseModel, Field, ConfigDict
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)

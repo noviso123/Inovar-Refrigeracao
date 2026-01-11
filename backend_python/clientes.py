@@ -32,7 +32,6 @@ class LocationResponse(LocationBase):
     id: int
     client_id: int
 
-from pydantic import BaseModel, Field
 
 class ClientBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -106,7 +105,7 @@ def list_clients(db: Session = Depends(get_db)):
 
 @router.post("/clientes", response_model=ClientResponse)
 def create_client(client: ClientCreate, db: Session = Depends(get_db)):
-    print(f"Creating client: {client}")
+    logger.info(f"Creating client: {client.nome}")
     document = None
     if client.cpf:
         document = validate_cpf(client.cpf)
