@@ -3,8 +3,8 @@ import { token } from './auth';
 
 export interface Notification {
     id: number;
-    title: str;
-    message: str;
+    title: string;
+    message: string;
     type: string;
     read: boolean;
     created_at: string;

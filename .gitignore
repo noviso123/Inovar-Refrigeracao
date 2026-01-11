@@ -108,3 +108,5 @@ docker-compose.override.yml
 # Keep example files
 !.env.example
 !.env.*.example
+.vercel
+.env*.local
