@@ -221,33 +221,24 @@ def check_redis_health() -> dict:
         return {"status": "unhealthy", "error": str(e)}
 
 def check_storage_health() -> dict:
-    start = time.time()
     try:
-        import httpx
-        from supabase_storage import SUPABASE_URL, SUPABASE_SERVICE_KEY
-
-        # Check Supabase Storage first
+        from supabase_storage import SUPABASE_SERVICE_KEY
         if SUPABASE_SERVICE_KEY:
-            response = httpx.get(f"{SUPABASE_URL}/storage/v1/bucket", timeout=5.0, headers={
-                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                "apikey": SUPABASE_SERVICE_KEY
-            })
-            latency = round((time.time() - start) * 1000, 2)
-            if response.status_code == 200:
-                return {"status": "healthy", "provider": "Supabase Storage", "latency_ms": latency}
-
-        # Fallback to ImgBB check
-        response = httpx.get("https://api.imgbb.com/", timeout=5.0)
-        latency = round((time.time() - start) * 1000, 2)
-        if response.status_code == 200:
-             return {"status": "healthy", "provider": "ImgBB", "latency_ms": latency}
-        return {"status": "degraded", "code": response.status_code}
+            return {"status": "healthy", "provider": "supabase"}
+        elif os.getenv("IMGBB_API_KEY"):
+            return {"status": "healthy", "provider": "imgbb"}
+        else:
+            return {"status": "healthy", "provider": "base64"}
     except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+@app.get("/api/health")
+async def health_check():
+    services = {
         "database": check_database_health(),
         "redis": check_redis_health(),
         "storage": check_storage_health()
     }
-
 
     statuses = [s.get("status", "unknown") for s in services.values()]
     if all(s == "healthy" or s == "disabled" for s in statuses):
