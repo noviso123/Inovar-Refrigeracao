@@ -15,20 +15,26 @@
             }
         }
     ],
-    "rewrites": [
+    "routes": [
         {
-            "source": "/api/:path*",
-            "destination": "/api/index.py"
+            "src": "/api/(.*)",
+            "dest": "/api/index.py"
         },
         {
-            "source": "/((?!api/).*)",
-            "destination": "/index.html"
-        }
-    ],
-    "crons": [
+            "src": "/_app/(.*)",
+            "dest": "/_app/$1"
+        },
         {
-            "path": "/api/cron/maintenance-reminders",
-            "schedule": "0 9 * * *"
+            "src": "/logo.png",
+            "dest": "/logo.png"
+        },
+        {
+            "src": "/favicon.svg",
+            "dest": "/favicon.svg"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/index.html"
         }
     ],
     "cleanUrls": true,
