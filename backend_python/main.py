@@ -435,12 +435,22 @@ if not os.getenv("VERCEL"):
 # SPA Fallback - Catch all other routes and serve index.html
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
-    # If we are on Vercel, this route should only be reached for /api/* routes 
-    # that didn't match any other handler.
+    # If we are on Vercel, try to serve from ../api/static (where the build copies it)
     if os.getenv("VERCEL"):
+        # Path relative to backend_python (which is the CWD in index.py)
+        static_dir = "../api/static"
+        static_file_path = os.path.join(static_dir, full_path)
+        
+        if os.path.exists(static_file_path) and os.path.isfile(static_file_path):
+            return FileResponse(static_file_path)
+        
+        index_path = os.path.join(static_dir, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+            
         return JSONResponse(
             status_code=404, 
-            content={"detail": f"API route not found: /api/{full_path}"}
+            content={"detail": f"Not Found: {full_path}"}
         )
     
     # Local development fallback

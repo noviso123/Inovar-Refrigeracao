@@ -3,6 +3,7 @@
 !backend_python/
 !backend_python/*.py
 !backend_python/requirements.txt
+!api/static/
 !requirements.txt
 
 # Keep ignoring other unnecessary files
