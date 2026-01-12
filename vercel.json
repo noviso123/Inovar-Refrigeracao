@@ -15,22 +15,14 @@
             }
         }
     ],
-    "routes": [
+    "rewrites": [
         {
-            "src": "/api/(.*)",
-            "dest": "backend_python/main.py"
+            "source": "/api/:path*",
+            "destination": "/backend_python/main.py"
         },
         {
-            "src": "/(.*)",
-            "dest": "frontend-svelte/$1",
-            "continue": true
-        },
-        {
-            "handle": "filesystem"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "frontend-svelte/index.html"
+            "source": "/((?!api/).*)",
+            "destination": "/frontend-svelte/$1"
         }
     ],
     "crons": [
