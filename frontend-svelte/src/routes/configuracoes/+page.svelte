@@ -186,11 +186,55 @@
         }
     }
 
+    // Máscaras
+    function maskPhone(value: string) {
+        return value
+            .replace(/\D/g, "")
+            .replace(/^(\d{2})(\d)/g, "($1) $2")
+            .replace(/(\d)(\d{4})$/, "$1-$2")
+            .slice(0, 15);
+    }
+
+    function maskCpf(value: string) {
+        return value
+            .replace(/\D/g, "")
+            .replace(/(\d{3})(\d)/, "$1.$2")
+            .replace(/(\d{3})(\d)/, "$1.$2")
+            .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+            .slice(0, 14);
+    }
+
+    function maskCep(value: string) {
+        return value
+            .replace(/\D/g, "")
+            .replace(/^(\d{5})(\d)/, "$1-$2")
+            .slice(0, 9);
+    }
+
+    function maskCnpj(value: string) {
+        return value
+            .replace(/\D/g, "")
+            .replace(/^(\d{2})(\d)/, "$1.$2")
+            .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+            .replace(/\.(\d{3})(\d)/, ".$1/$2")
+            .replace(/(\d{4})(\d)/, "$1-$2")
+            .slice(0, 18);
+    }
+
+    // Watchers para máscaras
+    $: phone = maskPhone(phone);
+    $: cpf = maskCpf(cpf);
+    $: cep = maskCep(cep);
+    $: empresa.cnpj = maskCnpj(empresa.cnpj);
+    $: empresa.telefone = maskPhone(empresa.telefone);
+    $: empresa.cep = maskCep(empresa.cep);
+
     async function handleCepChangeEmpresa() {
-        if (empresa.cep.length < 8) return;
+        const cleanCep = empresa.cep.replace(/\D/g, "");
+        if (cleanCep.length !== 8) return;
+
         isLoadingCepEmpresa = true;
         try {
-            const cleanCep = empresa.cep.replace(/\D/g, "");
             const res = await fetch(
                 `https://viacep.com.br/ws/${cleanCep}/json/`,
             );
@@ -201,6 +245,9 @@
                     empresa.bairro = data.bairro || "";
                     empresa.cidade = data.localidade || "";
                     empresa.estado = data.uf || "";
+                    // Focar no número (idealmente, mas Svelte reativo cuida do preenchimento)
+                } else {
+                    alert("CEP não encontrado.");
                 }
             }
         } catch (error) {
@@ -210,15 +257,12 @@
         }
     }
 
-    $: if (empresa.cep && empresa.cep.replace(/\D/g, "").length === 8) {
-        handleCepChangeEmpresa();
-    }
-
     async function handleCepChange() {
-        if (cep.length < 8) return;
+        const cleanCep = cep.replace(/\D/g, "");
+        if (cleanCep.length !== 8) return;
+
         isLoadingCep = true;
         try {
-            const cleanCep = cep.replace(/\D/g, "");
             const res = await fetch(
                 `https://viacep.com.br/ws/${cleanCep}/json/`,
             );
@@ -229,6 +273,13 @@
                     neighborhood = data.bairro || "";
                     city = data.localidade || "";
                     state = data.uf || "";
+                    // Limpar número e complemento para forçar preenchimento se for novo endereço
+                    // Mas manter se o usuário estiver apenas corrigindo o CEP do mesmo endereço?
+                    // O usuário pediu: "deixando somente o número e complemento para ser preenchido"
+                    // Vamos assumir que ele quer que o resto seja preenchido, não necessariamente limpar o que já tem se for edição,
+                    // mas garantir que o auto-fill funcione.
+                } else {
+                    alert("CEP não encontrado.");
                 }
             }
         } catch (error) {
@@ -236,6 +287,15 @@
         } finally {
             isLoadingCep = false;
         }
+    }
+
+    // Trigger CEP search when full CEP is entered
+    $: if (empresa.cep && empresa.cep.replace(/\D/g, "").length === 8) {
+        handleCepChangeEmpresa();
+    }
+
+    $: if (cep && cep.replace(/\D/g, "").length === 8) {
+        handleCepChange();
     }
 
     async function handleSave() {
