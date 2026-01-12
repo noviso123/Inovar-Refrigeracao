@@ -21,12 +21,18 @@ REDIS_AVAILABLE = False
 if REDIS_URL:
     # Use REDIS_URL if provided (highest priority)
     try:
-        redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+        redis_client = redis.from_url(
+            REDIS_URL, 
+            decode_responses=True, 
+            socket_connect_timeout=2
+        )
         redis_client.ping()
         REDIS_AVAILABLE = True
         logger.info("✅ Redis connected via REDIS_URL")
     except Exception as e:
         logger.warning(f"⚠️ Redis connection failed (REDIS_URL): {e}")
+        REDIS_AVAILABLE = False
+        redis_client = None
 else:
     # Fallback to individual parameters
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -38,13 +44,16 @@ else:
             host=REDIS_HOST,
             port=REDIS_PORT,
             password=REDIS_PASSWORD if REDIS_PASSWORD else None,
-            decode_responses=True
+            decode_responses=True,
+            socket_connect_timeout=2  # Short timeout for Vercel
         )
         redis_client.ping()
         REDIS_AVAILABLE = True
         logger.info(f"✅ Redis connected via parameters ({REDIS_HOST}:{REDIS_PORT})")
     except Exception as e:
         logger.warning(f"⚠️ Redis not available (no valid config): {e}")
+        REDIS_AVAILABLE = False
+        redis_client = None
 
 if not REDIS_AVAILABLE:
     logger.info("ℹ️ Rate limiting and caching disabled (Redis not configured)")

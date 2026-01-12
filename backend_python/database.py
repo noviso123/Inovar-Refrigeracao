@@ -14,16 +14,17 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # Force port 6543 for Supabase to use connection pooling (fixes OperationalError on Vercel)
-if "supabase.co" in DATABASE_URL and ":5432" in DATABASE_URL:
-    logger.info("🔧 Auto-correcting Supabase port from 5432 to 6543 for connection pooling")
-    DATABASE_URL = DATABASE_URL.replace(":5432", ":6543")
+# if "supabase.co" in DATABASE_URL and ":5432" in DATABASE_URL:
+#     logger.info("🔧 Auto-correcting Supabase port from 5432 to 6543 for connection pooling")
+#     DATABASE_URL = DATABASE_URL.replace(":5432", ":6543")
 
 # Remove unsupported parameters for psycopg2
 if "?" in DATABASE_URL:
     base_url, params = DATABASE_URL.split("?", 1)
     valid_params = []
     for param in params.split("&"):
-        if "pgbouncer" not in param and "sslmode" not in param:
+        key = param.split("=")[0]
+        if key not in ["pgbouncer", "sslmode"]:
             valid_params.append(param)
     
     if valid_params:
@@ -41,17 +42,40 @@ if "sqlite" in DATABASE_URL:
     )
 else:
     # Standard PostgreSQL Configuration
-    # Recommended for Direct Connection or compatible Poolers
+    pool_config = {
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_recycle": 300
+    }
+    
+    # Use NullPool on Vercel to prevent connection issues
+    if os.getenv("VERCEL"):
+        logger.info("⚡ Using NullPool for Vercel Serverless Environment")
+        pool_config = {"poolclass": NullPool}
+        
+        # Force IPv4 Resolution for Supabase on Vercel
+        try:
+            import socket
+            from urllib.parse import urlparse, urlunparse
+            
+            parsed = urlparse(DATABASE_URL)
+            if parsed.hostname:
+                ip = socket.gethostbyname(parsed.hostname)
+                logger.info(f"🔍 Resolved {parsed.hostname} to {ip}")
+                # Reconstruct URL with IP
+                new_netloc = parsed.netloc.replace(parsed.hostname, ip)
+                DATABASE_URL = parsed._replace(netloc=new_netloc).geturl()
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to resolve IPv4: {e}")
+
     engine = create_engine(
         DATABASE_URL,
-        pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
-        pool_recycle=300,
         connect_args={
             "sslmode": "require",
             "connect_timeout": 15
-        }
+        },
+        **pool_config
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
