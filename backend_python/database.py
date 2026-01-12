@@ -13,6 +13,19 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Remove unsupported parameters for psycopg2
+if "?" in DATABASE_URL:
+    base_url, params = DATABASE_URL.split("?", 1)
+    valid_params = []
+    for param in params.split("&"):
+        if "pgbouncer" not in param and "sslmode" not in param:
+            valid_params.append(param)
+    
+    if valid_params:
+        DATABASE_URL = f"{base_url}?{'&'.join(valid_params)}"
+    else:
+        DATABASE_URL = base_url
+
 logger.info(f"Database Config: {DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else 'sqlite'}")
 
 # Configuração do Engine
