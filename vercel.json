@@ -25,6 +25,9 @@
             "destination": "/frontend-svelte/$1"
         }
     ],
+    "env": {
+        "PYTHONPATH": "backend_python"
+    },
     "crons": [
         {
             "path": "/api/cron/maintenance-reminders",
