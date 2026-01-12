@@ -12,8 +12,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Redis Connection
-# Priority: 1. REDIS_URL (full connection string), 2. Individual parameters
-REDIS_URL = os.getenv("REDIS_URL", "")
+# Priority: 1. REDIS_URL, 2. KV_URL (Vercel Upstash), 3. Individual parameters
+REDIS_URL = os.getenv("REDIS_URL") or os.getenv("KV_URL", "")
 
 redis_client = None
 REDIS_AVAILABLE = False
