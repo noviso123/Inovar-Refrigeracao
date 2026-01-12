@@ -17,12 +17,12 @@
     ],
     "routes": [
         {
-            "src": "/api(.*)",
-            "dest": "/backend_python/main.py"
+            "src": "/api/(.*)",
+            "dest": "backend_python/main.py"
         },
         {
             "src": "/(.*)",
-            "dest": "/frontend-svelte/$1"
+            "dest": "frontend-svelte/$1"
         }
     ],
     "crons": [
