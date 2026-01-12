@@ -14,7 +14,7 @@ from database import get_db, engine
 from models import (
     Base, SystemSettings, User, Client, Location, Equipment, 
     ServiceOrder, ItemOS, WhatsAppInstance, Message, Notification,
-    BotConfig, FilaEnvio, BotStatus, ManutencaoAgendada
+    BotConfig, FilaEnvio, BotStatus
 )
 from auth import get_password_hash
 from sqlalchemy import inspect, text
