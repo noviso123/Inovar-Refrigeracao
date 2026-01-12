@@ -260,7 +260,7 @@ async def health_check():
     return {
         "status": overall,
         "timestamp": datetime.utcnow().isoformat() + "Z",
-        "version": "1.0.1",
+        "version": "1.0.2",
         "services": services,
         "rate_limiting": "enabled" if REDIS_AVAILABLE else "disabled"
     }
