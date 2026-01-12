@@ -1,16 +1,22 @@
+import os
+import sys
+
+# Add the current directory to sys.path for Vercel compatibility
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Request, Response
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
-import os
 import logging
 import json
 import httpx
 import time
 from datetime import datetime
 import signal
-import sys
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
