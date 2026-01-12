@@ -422,8 +422,11 @@ async def websocket_notifications(websocket: WebSocket, token: str = None):
         except:
             pass
 
-# Serve Static Files (Frontend)
-app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+# Serve Static Files (Frontend) - Only if directory exists
+if os.path.exists("static/assets"):
+    app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+elif os.path.exists("../static/assets"):
+    app.mount("/assets", StaticFiles(directory="../static/assets"), name="assets")
 
 # SPA Fallback - Catch all other routes and serve index.html
 @app.get("/{full_path:path}")
@@ -434,8 +437,13 @@ async def serve_spa(full_path: str):
     if os.path.exists(static_file_path) and os.path.isfile(static_file_path):
         return FileResponse(static_file_path)
     
-    # Otherwise serve index.html
-    return FileResponse("static/index.html")
+    # Otherwise serve index.html if it exists
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    
+    # On Vercel, this is handled by rewrites, so we can return a 404
+    # if we reach here, it means the rewrite didn't catch it or it's a real 404
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 if __name__ == "__main__":
     import uvicorn
