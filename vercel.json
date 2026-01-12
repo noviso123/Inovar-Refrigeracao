@@ -6,12 +6,10 @@
             "use": "@vercel/python"
         },
         {
-            "src": "frontend-svelte/package.json",
+            "src": "package.json",
             "use": "@vercel/static-build",
             "config": {
-                "distDir": "build",
-                "installCommand": "npm install",
-                "buildCommand": "npm run build"
+                "distDir": "frontend-svelte/build"
             }
         }
     ],
