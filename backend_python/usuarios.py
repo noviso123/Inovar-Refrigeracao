@@ -51,6 +51,82 @@ class UserUpdateRequest(BaseModel):
     signature_url: Optional[str] = None
     endereco: Optional[dict] = None
 
+# ============= AUTHENTICATED USER PROFILE =============
+
+class MeUpdateRequest(BaseModel):
+    nome_completo: Optional[str] = None
+    telefone: Optional[str] = None
+    cpf: Optional[str] = None
+    avatar_url: Optional[str] = None
+    endereco: Optional[dict] = None
+
+class PasswordChangeRequest(BaseModel):
+    novaSenha: str
+
+@router.put("/usuarios/me")
+def update_current_user(
+    data: MeUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Atualiza o perfil do usuário autenticado."""
+    try:
+        logger.info(f"Atualizando usuário {current_user.id}: {data}")
+
+        if data.nome_completo is not None:
+            current_user.full_name = data.nome_completo
+        if data.telefone is not None:
+            current_user.phone = data.telefone
+        if data.cpf is not None:
+            current_user.cpf = data.cpf
+        if data.avatar_url is not None:
+            current_user.avatar_url = data.avatar_url
+
+        if data.endereco is not None:
+            addr = data.endereco
+            current_user.cep = addr.get("cep")
+            current_user.logradouro = addr.get("logradouro") or addr.get("rua")
+            current_user.numero = addr.get("numero")
+            current_user.complemento = addr.get("complemento")
+            current_user.bairro = addr.get("bairro")
+            current_user.cidade = addr.get("cidade")
+            current_user.estado = addr.get("estado")
+
+        db.commit()
+        db.refresh(current_user)
+
+        logger.info(f"Usuário {current_user.id} atualizado com sucesso")
+
+        return {
+            "id": current_user.id,
+            "email": current_user.email,
+            "nome_completo": current_user.full_name,
+            "cargo": current_user.role,
+            "telefone": current_user.phone,
+            "cpf": current_user.cpf,
+            "avatar_url": current_user.avatar_url,
+            "is_active": current_user.is_active,
+            "message": "Perfil atualizado com sucesso"
+        }
+    except Exception as e:
+        logger.error(f"Erro ao atualizar usuário: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/usuarios/me/senha")
+def change_password(
+    data: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Altera a senha do usuário autenticado."""
+    if len(data.novaSenha) < 6:
+        raise HTTPException(status_code=400, detail="A senha deve ter pelo menos 6 caracteres")
+
+    current_user.password_hash = get_password_hash(data.novaSenha)
+    db.commit()
+
+    return {"message": "Senha alterada com sucesso"}
+
 # Routes
 @router.get("/usuarios")
 def list_users(db: Session = Depends(get_db)):
@@ -187,80 +263,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Usuário removido"}
 
-# ============= AUTHENTICATED USER PROFILE =============
 
-class MeUpdateRequest(BaseModel):
-    nome_completo: Optional[str] = None
-    telefone: Optional[str] = None
-    cpf: Optional[str] = None
-    avatar_url: Optional[str] = None
-    endereco: Optional[dict] = None
-
-class PasswordChangeRequest(BaseModel):
-    novaSenha: str
-
-@router.put("/usuarios/me")
-def update_current_user(
-    data: MeUpdateRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Atualiza o perfil do usuário autenticado."""
-    try:
-        logger.info(f"Atualizando usuário {current_user.id}: {data}")
-
-        if data.nome_completo is not None:
-            current_user.full_name = data.nome_completo
-        if data.telefone is not None:
-            current_user.phone = data.telefone
-        if data.cpf is not None:
-            current_user.cpf = data.cpf
-        if data.avatar_url is not None:
-            current_user.avatar_url = data.avatar_url
-
-        if data.endereco is not None:
-            addr = data.endereco
-            current_user.cep = addr.get("cep")
-            current_user.logradouro = addr.get("logradouro") or addr.get("rua")
-            current_user.numero = addr.get("numero")
-            current_user.complemento = addr.get("complemento")
-            current_user.bairro = addr.get("bairro")
-            current_user.cidade = addr.get("cidade")
-            current_user.estado = addr.get("estado")
-
-        db.commit()
-        db.refresh(current_user)
-
-        logger.info(f"Usuário {current_user.id} atualizado com sucesso")
-
-        return {
-            "id": current_user.id,
-            "email": current_user.email,
-            "nome_completo": current_user.full_name,
-            "cargo": current_user.role,
-            "telefone": current_user.phone,
-            "cpf": current_user.cpf,
-            "avatar_url": current_user.avatar_url,
-            "is_active": current_user.is_active,
-            "message": "Perfil atualizado com sucesso"
-        }
-    except Exception as e:
-        logger.error(f"Erro ao atualizar usuário: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.put("/usuarios/me/senha")
-def change_password(
-    data: PasswordChangeRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Altera a senha do usuário autenticado."""
-    if len(data.novaSenha) < 6:
-        raise HTTPException(status_code=400, detail="A senha deve ter pelo menos 6 caracteres")
-
-    current_user.password_hash = get_password_hash(data.novaSenha)
-    db.commit()
-
-    return {"message": "Senha alterada com sucesso"}
 
 
