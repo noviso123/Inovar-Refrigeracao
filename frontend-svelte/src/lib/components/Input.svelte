@@ -34,6 +34,8 @@
             bind:value
             on:focus={() => (focused = true)}
             on:blur={() => (focused = false)}
+            on:input
+            on:change
             class="w-full px-4 py-3 bg-white border rounded-xl transition-all duration-200 outline-none
              {error
                 ? 'border-red-300 bg-red-50/30 text-red-900 focus:border-red-500'

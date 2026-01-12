@@ -186,7 +186,44 @@
         }
     }
 
-    // Máscaras
+    // Handlers de Input com Máscara
+    function handlePhoneInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        phone = maskPhone(target.value);
+    }
+
+    function handleCpfInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        cpf = maskCpf(target.value);
+    }
+
+    function handleCepInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        cep = maskCep(target.value);
+        if (cep.length === 9) {
+            handleCepChange();
+        }
+    }
+
+    function handleEmpresaCnpjInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        empresa.cnpj = maskCnpj(target.value);
+    }
+
+    function handleEmpresaPhoneInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        empresa.telefone = maskPhone(target.value);
+    }
+
+    function handleEmpresaCepInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        empresa.cep = maskCep(target.value);
+        if (empresa.cep.length === 9) {
+            handleCepChangeEmpresa();
+        }
+    }
+
+    // Máscaras (Helpers)
     function maskPhone(value: string) {
         return value
             .replace(/\D/g, "")
@@ -220,14 +257,6 @@
             .replace(/(\d{4})(\d)/, "$1-$2")
             .slice(0, 18);
     }
-
-    // Watchers para máscaras
-    $: phone = maskPhone(phone);
-    $: cpf = maskCpf(cpf);
-    $: cep = maskCep(cep);
-    $: empresa.cnpj = maskCnpj(empresa.cnpj);
-    $: empresa.telefone = maskPhone(empresa.telefone);
-    $: empresa.cep = maskCep(empresa.cep);
 
     async function handleCepChangeEmpresa() {
         const cleanCep = empresa.cep.replace(/\D/g, "");
@@ -613,11 +642,13 @@
                                     <Input
                                         label="CPF"
                                         bind:value={cpf}
+                                        on:input={handleCpfInput}
                                         placeholder="000.000.000-00"
                                     />
                                     <Input
                                         label="Telefone"
                                         bind:value={phone}
+                                        on:input={handlePhoneInput}
                                         placeholder="(00) 00000-0000"
                                     />
                                 </div>
@@ -653,6 +684,7 @@
                                     <Input
                                         label="CEP"
                                         bind:value={cep}
+                                        on:input={handleCepInput}
                                         placeholder="00000-000"
                                         loading={isLoadingCep}
                                     />
@@ -840,11 +872,13 @@
                                     <Input
                                         label="CNPJ"
                                         bind:value={empresa.cnpj}
+                                        on:input={handleEmpresaCnpjInput}
                                         placeholder="00.000.000/0000-00"
                                     />
                                     <Input
                                         label="Telefone Comercial"
                                         bind:value={empresa.telefone}
+                                        on:input={handleEmpresaPhoneInput}
                                         placeholder="(00) 0000-0000"
                                     />
                                 </div>
@@ -859,6 +893,7 @@
                                             <Input
                                                 label="CEP"
                                                 bind:value={empresa.cep}
+                                                on:input={handleEmpresaCepInput}
                                                 placeholder="00000-000"
                                                 loading={isLoadingCepEmpresa}
                                             />
