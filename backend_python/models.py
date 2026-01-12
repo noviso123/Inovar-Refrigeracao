@@ -13,7 +13,7 @@ class SystemSettings(Base):
     cnpj = Column(String, nullable=True)
     email_contact = Column(String, nullable=True)
     phone_contact = Column(String, nullable=True)
-    phone_contact = Column(String, nullable=True)
+
 
     # Address Data
     cep = Column(String, nullable=True)

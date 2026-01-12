@@ -265,9 +265,12 @@
             if (!userResponse.ok) {
                 const errorData = await userResponse.json().catch(() => ({}));
                 console.error("Erro ao salvar dados pessoais:", errorData);
-                throw new Error(
-                    errorData.detail || `Erro ${userResponse.status}`,
-                );
+                const detail = errorData.detail
+                    ? typeof errorData.detail === "object"
+                        ? JSON.stringify(errorData.detail)
+                        : errorData.detail
+                    : `Erro ${userResponse.status}`;
+                throw new Error(detail);
             }
 
             const savedUser = await userResponse.json();
@@ -349,9 +352,13 @@
             alert("Configurações salvas com sucesso!");
         } catch (error) {
             console.error("Erro ao salvar:", error);
-            alert(
-                `Erro ao salvar configurações: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
-            );
+            let errorMessage = "Erro desconhecido";
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === "object" && error !== null) {
+                errorMessage = JSON.stringify(error);
+            }
+            alert(`Erro ao salvar configurações: ${errorMessage}`);
         } finally {
             isSaving = false;
         }
