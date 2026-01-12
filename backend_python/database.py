@@ -13,6 +13,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Force port 6543 for Supabase to use connection pooling (fixes OperationalError on Vercel)
+if "supabase.co" in DATABASE_URL and ":5432" in DATABASE_URL:
+    logger.info("🔧 Auto-correcting Supabase port from 5432 to 6543 for connection pooling")
+    DATABASE_URL = DATABASE_URL.replace(":5432", ":6543")
+
 # Remove unsupported parameters for psycopg2
 if "?" in DATABASE_URL:
     base_url, params = DATABASE_URL.split("?", 1)
