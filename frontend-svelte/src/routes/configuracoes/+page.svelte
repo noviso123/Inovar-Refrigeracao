@@ -186,43 +186,6 @@
         }
     }
 
-    // Handlers de Input com Máscara
-    function handlePhoneInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        phone = maskPhone(target.value);
-    }
-
-    function handleCpfInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        cpf = maskCpf(target.value);
-    }
-
-    function handleCepInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        cep = maskCep(target.value);
-        if (cep.length === 9) {
-            handleCepChange();
-        }
-    }
-
-    function handleEmpresaCnpjInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        empresa.cnpj = maskCnpj(target.value);
-    }
-
-    function handleEmpresaPhoneInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        empresa.telefone = maskPhone(target.value);
-    }
-
-    function handleEmpresaCepInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        empresa.cep = maskCep(target.value);
-        if (empresa.cep.length === 9) {
-            handleCepChangeEmpresa();
-        }
-    }
-
     // Máscaras (Helpers)
     function maskPhone(value: string) {
         return value
@@ -274,7 +237,6 @@
                     empresa.bairro = data.bairro || "";
                     empresa.cidade = data.localidade || "";
                     empresa.estado = data.uf || "";
-                    // Focar no número (idealmente, mas Svelte reativo cuida do preenchimento)
                 } else {
                     alert("CEP não encontrado.");
                 }
@@ -302,11 +264,6 @@
                     neighborhood = data.bairro || "";
                     city = data.localidade || "";
                     state = data.uf || "";
-                    // Limpar número e complemento para forçar preenchimento se for novo endereço
-                    // Mas manter se o usuário estiver apenas corrigindo o CEP do mesmo endereço?
-                    // O usuário pediu: "deixando somente o número e complemento para ser preenchido"
-                    // Vamos assumir que ele quer que o resto seja preenchido, não necessariamente limpar o que já tem se for edição,
-                    // mas garantir que o auto-fill funcione.
                 } else {
                     alert("CEP não encontrado.");
                 }
@@ -642,13 +599,13 @@
                                     <Input
                                         label="CPF"
                                         bind:value={cpf}
-                                        on:input={handleCpfInput}
+                                        mask={maskCpf}
                                         placeholder="000.000.000-00"
                                     />
                                     <Input
                                         label="Telefone"
                                         bind:value={phone}
-                                        on:input={handlePhoneInput}
+                                        mask={maskPhone}
                                         placeholder="(00) 00000-0000"
                                     />
                                 </div>
@@ -684,7 +641,7 @@
                                     <Input
                                         label="CEP"
                                         bind:value={cep}
-                                        on:input={handleCepInput}
+                                        mask={maskCep}
                                         placeholder="00000-000"
                                         loading={isLoadingCep}
                                     />
@@ -872,13 +829,13 @@
                                     <Input
                                         label="CNPJ"
                                         bind:value={empresa.cnpj}
-                                        on:input={handleEmpresaCnpjInput}
+                                        mask={maskCnpj}
                                         placeholder="00.000.000/0000-00"
                                     />
                                     <Input
                                         label="Telefone Comercial"
                                         bind:value={empresa.telefone}
-                                        on:input={handleEmpresaPhoneInput}
+                                        mask={maskPhone}
                                         placeholder="(00) 0000-0000"
                                     />
                                 </div>
@@ -893,7 +850,7 @@
                                             <Input
                                                 label="CEP"
                                                 bind:value={empresa.cep}
-                                                on:input={handleEmpresaCepInput}
+                                                mask={maskCep}
                                                 placeholder="00000-000"
                                                 loading={isLoadingCepEmpresa}
                                             />

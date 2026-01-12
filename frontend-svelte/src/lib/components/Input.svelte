@@ -8,9 +8,19 @@
     export let className = "";
     export let required = false;
     export let loading = false;
+    export let mask: ((value: string) => string) | undefined = undefined;
 
     const id = "input-" + Math.random().toString(36).substr(2, 9);
     let focused = false;
+
+    function handleInput(e: Event) {
+        if (mask) {
+            const target = e.target as HTMLInputElement;
+            const newValue = mask(target.value);
+            value = newValue;
+            target.value = newValue;
+        }
+    }
 </script>
 
 <div class="flex flex-col gap-1.5 {className}">
@@ -34,7 +44,7 @@
             bind:value
             on:focus={() => (focused = true)}
             on:blur={() => (focused = false)}
-            on:input
+            on:input={handleInput}
             on:change
             class="w-full px-4 py-3 bg-white border rounded-xl transition-all duration-200 outline-none
              {error
