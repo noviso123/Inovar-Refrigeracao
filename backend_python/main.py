@@ -61,7 +61,7 @@ from redis_utils import (
 app = FastAPI(
     title="Inovar Refrigeração API",
     description="API do Sistema de Gestão para Inovar Refrigeração",
-    version="1.0.2",
+    version="1.0.3",
     redirect_slashes=False
 )
 
@@ -260,7 +260,7 @@ async def health_check():
     return {
         "status": overall,
         "timestamp": datetime.utcnow().isoformat() + "Z",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "services": services,
         "rate_limiting": "enabled" if REDIS_AVAILABLE else "disabled"
     }
