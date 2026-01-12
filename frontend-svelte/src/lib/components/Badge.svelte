@@ -6,7 +6,7 @@
         | "warning"
         | "danger"
         | "info" = "neutral";
-    export let size: "sm" | "md" = "md";
+    export let size: "sm" | "md" | "lg" = "md";
     export let className = "";
 
     const variants = {
@@ -21,6 +21,7 @@
     const sizes = {
         sm: "px-2 py-0.5 text-[10px]",
         md: "px-2.5 py-1 text-xs",
+        lg: "px-3 py-1.5 text-sm",
     };
 </script>
 

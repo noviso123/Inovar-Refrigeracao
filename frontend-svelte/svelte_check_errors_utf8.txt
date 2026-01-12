@@ -1,0 +1,78 @@
+﻿Loading svelte-check in workspace: c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte
+Getting Svelte diagnostics...
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\clientes\+page.svelte[39m:388:5
+[31mError[39m: Object literal may only specify known properties, and '"isOpen"' does not exist in type '__sveltets_2_PropsWithChildren<{ title?: string | undefined; show?: boolean | undefined; maxWidth?: string | undefined; }, { default: {}; footer: {}; }>'. (ts)
+[36m<Modal
+    [35misOpen[36m={isModalOpen}
+    title={editingCliente ? "Editar Cliente" : "Novo Cliente"}[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\clientes\+page.svelte[39m:499:26
+[31mError[39m: Cannot find name 'Clock'. Did you mean 'Lock'? (ts)
+[36m                    >
+                        <[35mClock[36m class="w-6 h-6" />
+                    </div>[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\configuracoes\+page.svelte[39m:590:41
+[31mError[39m: Object literal may only specify known properties, and '"loading"' does not exist in type '{ label?: string | undefined; type?: string | undefined; placeholder?: string | undefined; value?: string | number | undefined; error?: string | undefined; disabled?: boolean | undefined; className?: string | undefined; required?: boolean | undefined; }'. (ts)
+[36m                                        placeholder="00000-000"
+                                        [35mloading[36m={isLoadingCep}
+                                    />[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\configuracoes\+page.svelte[39m:796:49
+[31mError[39m: Object literal may only specify known properties, and '"loading"' does not exist in type '{ label?: string | undefined; type?: string | undefined; placeholder?: string | undefined; value?: string | number | undefined; error?: string | undefined; disabled?: boolean | undefined; className?: string | undefined; required?: boolean | undefined; }'. (ts)
+[36m                                                placeholder="00000-000"
+                                                [35mloading[36m={isLoadingCepEmpresa}
+                                            />[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\configuracoes\+page.svelte[39m:955:52
+[31mError[39m: Cannot find name 'ArrowRight'. (ts)
+[36m                            <Button variant="ghost" className="mt-8">
+                                Falar com Suporte <[35mArrowRight[36m
+                                    class="w-4 h-4 ml-2"[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\equipamentos\+page.svelte[39m:409:5
+[31mError[39m: Object literal may only specify known properties, and '"isOpen"' does not exist in type '__sveltets_2_PropsWithChildren<{ title?: string | undefined; show?: boolean | undefined; maxWidth?: string | undefined; }, { default: {}; footer: {}; }>'. (ts)
+[36m<Modal
+    [35misOpen[36m={isModalOpen}
+    title={editingEquipment ? "Editar Equipamento" : "Novo Equipamento"}[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\login\+page.svelte[39m:2:12
+[31mError[39m: Module '"$lib/auth"' has no exported member 'login'. (ts)
+[36m<script lang="ts">
+  import { [35mlogin[36m } from "$lib/auth";
+  import { goto } from "$app/navigation";[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\nova-solicitacao\+page.svelte[39m:296:5
+[31mError[39m: Object literal may only specify known properties, and '"isOpen"' does not exist in type '__sveltets_2_PropsWithChildren<{ title?: string | undefined; show?: boolean | undefined; maxWidth?: string | undefined; }, { default: {}; footer: {}; }>'. (ts)
+[36m<Modal
+    [35misOpen[36m={showClientModal}
+    title="Selecionar Cliente"[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\nova-solicitacao\+page.svelte[39m:386:38
+[31mError[39m: Type '"lg"' is not assignable to type '"sm" | "md" | undefined'. (ts)
+[36m            </div>
+            <Badge variant="success" [35msize[36m="lg" className="mb-4"
+                >OS #{createdOS?.sequential_id}</Badge[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\solicitacoes\+page.svelte[39m:373:34
+[31mError[39m: Cannot find name 'User'. (ts)
+[36m                            <div class="flex items-center gap-2">
+                                <[35mUser[36m class="w-4 h-4 text-surface-400" />
+                                <span class="text-xs font-bold text-surface-500"[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\suporte\+page.svelte[39m:63:21
+[31mError[39m: Type '"lg"' is not assignable to type '"sm" | "md" | undefined'. (ts)
+[36m                    variant="success"
+                    [35msize[36m="lg"
+                    className="px-6 py-3 text-sm"[39m
+
+c:\Users\jtsat\Downloads\Inovar Refrigeracao\frontend-svelte\[32msrc\routes\usuarios\+page.svelte[39m:305:5
+[31mError[39m: Object literal may only specify known properties, and '"isOpen"' does not exist in type '__sveltets_2_PropsWithChildren<{ title?: string | undefined; show?: boolean | undefined; maxWidth?: string | undefined; }, { default: {}; footer: {}; }>'. (ts)
+[36m<Modal
+    [35misOpen[36m={isModalOpen}
+    title={editingUser ? "Editar Usu├írio" : "Novo Usu├írio"}[39m
+
+====================================
+[31msvelte-check found 12 errors and 11 warnings in 12 files
+[39m

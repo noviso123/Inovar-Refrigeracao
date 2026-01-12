@@ -7,6 +7,7 @@
     export let disabled = false;
     export let className = "";
     export let required = false;
+    export let loading = false;
 
     const id = "input-" + Math.random().toString(36).substr(2, 9);
     let focused = false;

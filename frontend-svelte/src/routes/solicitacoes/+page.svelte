@@ -14,6 +14,7 @@
         MapPin,
         X,
         AlertCircle,
+        User,
     } from "lucide-svelte";
     import { Card, Badge, Button, Input, Skeleton } from "$lib";
 

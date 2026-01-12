@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { login } from "$lib/auth";
+  import { setToken, setUser } from "$lib/auth";
   import { goto } from "$app/navigation";
   import {
     Loader2,
@@ -26,7 +26,38 @@
     error = "";
 
     try {
-      await login(email, password);
+      const formData = new URLSearchParams();
+      formData.append("username", email);
+      formData.append("password", password);
+
+      const res = await fetch("/api/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Credenciais inválidas");
+      }
+
+      const data = await res.json();
+      setToken(data.access_token);
+
+      // Fetch user details
+      const userRes = await fetch("/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${data.access_token}`,
+        },
+      });
+
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setUser(userData);
+      }
+
       goto("/");
     } catch (err: any) {
       error = err.message || "Credenciais inválidas. Tente novamente.";
@@ -56,7 +87,11 @@
         <div
           class="w-24 h-24 bg-white rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-brand-600/10 border border-surface-100 p-4"
         >
-          <img src="/logo.png" alt="Inovar Logo" class="w-full h-full object-contain" />
+          <img
+            src="/logo.png"
+            alt="Inovar Logo"
+            class="w-full h-full object-contain"
+          />
         </div>
         <div
           class="absolute -top-2 -right-2 w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-lg border border-surface-50"

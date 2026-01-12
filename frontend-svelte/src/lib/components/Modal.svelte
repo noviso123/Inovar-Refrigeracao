@@ -5,7 +5,7 @@
     import { cubicOut } from "svelte/easing";
 
     export let title = "";
-    export let show = false;
+    export let isOpen = false;
     export let maxWidth = "max-w-lg";
 
     const dispatch = createEventDispatcher();
@@ -15,10 +15,10 @@
     }
 
     function handleKeydown(e: KeyboardEvent) {
-        if (e.key === "Escape" && show) close();
+        if (e.key === "Escape" && isOpen) close();
     }
 
-    $: if (show && typeof document !== "undefined") {
+    $: if (isOpen && typeof document !== "undefined") {
         document.body.style.overflow = "hidden";
     } else if (typeof document !== "undefined") {
         document.body.style.overflow = "auto";
@@ -27,7 +27,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-{#if show}
+{#if isOpen}
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div
