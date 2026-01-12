@@ -27,7 +27,6 @@
         ArrowRight,
     } from "lucide-svelte";
     import { Card, Badge, Button, Input, Modal, Skeleton } from "$lib";
-    import AutomacaoSettings from "$lib/components/AutomacaoSettings.svelte";
 
     let activeSection = "geral";
     let isSaving = false;

@@ -6,8 +6,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# URL de conexão
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
+# Force Supabase if missing or if it's the default sqlite
+if not DATABASE_URL or "sqlite" in DATABASE_URL:
+    print("DEBUG: Overriding SQLite/Missing URL with Supabase URL")
+    DATABASE_URL = "postgresql://postgres:inovar862485@db.apntpretjodygczbeozk.supabase.co:5432/postgres?sslmode=require"
 
 # Ajustar URL para PostgreSQL
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):

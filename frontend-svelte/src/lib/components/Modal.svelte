@@ -7,11 +7,13 @@
     export let title = "";
     export let isOpen = false;
     export let maxWidth = "max-w-lg";
+    export let onClose: (() => void) | undefined = undefined;
 
     const dispatch = createEventDispatcher();
 
     function close() {
         dispatch("close");
+        if (onClose) onClose();
     }
 
     function handleKeydown(e: KeyboardEvent) {
