@@ -103,7 +103,19 @@ def list_clients(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_operational_user)
 ):
+    cache_key = "cache:clientes:all"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     clients = db.query(Client).options(joinedload(Client.locations)).all()
+    
+    # We need to manually serialize if using joinedload or just let set_cache handle it if it's a list of models
+    # Actually, set_cache uses json.dumps which might fail on SQLAlchemy models if not converted.
+    # But ClientResponse is the response_model, so FastAPI handles it. 
+    # For caching, we should store the serialized version.
+    
+    set_cache(cache_key, clients, ttl_seconds=300)
     return clients
 
 @router.post("/clientes", response_model=ClientResponse)
@@ -237,6 +249,21 @@ def update_client(
     db.commit()
     db.refresh(db_client)
     delete_cache("clientes")
+
+    # Real-time Broadcast
+    try:
+        from websocket_manager import manager
+        import asyncio
+        asyncio.create_task(manager.broadcast({
+            "type": "client_updated",
+            "data": {
+                "id": db_client.id,
+                "name": db_client.name
+            }
+        }))
+    except Exception as e:
+        logger.error(f"Failed to broadcast client update: {e}")
+
     return db_client
 
 @router.delete("/clientes/{client_id}")

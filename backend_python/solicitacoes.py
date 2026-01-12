@@ -43,6 +43,19 @@ class ServiceOrderBase(BaseModel):
 class ServiceOrderCreate(ServiceOrderBase):
     itens: List[ItemOSSchema] = []
 
+class ServiceOrderUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    titulo: Optional[str] = Field(None, validation_alias="title")
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    service_type: Optional[str] = None
+    description: Optional[str] = None
+    descricao_detalhada: Optional[str] = None
+    technical_report: Optional[str] = None
+    valor_total: Optional[float] = None
+    itens_os: Optional[List[ItemOSSchema]] = None
+    historico: Optional[List[dict]] = None
+
 class ServiceOrderResponse(ServiceOrderBase):
     id: int
     sequential_id: int
@@ -199,6 +212,88 @@ async def create_order(
         })
     except Exception as e:
         logger.error(f"Failed to broadcast new order: {e}")
+
+    return {
+        "id": db_order.id,
+        "sequential_id": db_order.sequential_id,
+        "titulo": db_order.title,
+        "status": db_order.status,
+        "priority": db_order.priority,
+        "service_type": db_order.service_type,
+        "description": db_order.description,
+        "cliente_id": db_order.client_id,
+        "local_id": db_order.location_id,
+        "equipment_id": db_order.equipment_id,
+        "scheduled_at": db_order.scheduled_at.isoformat() if db_order.scheduled_at else None,
+        "created_at": db_order.created_at,
+        "valor_total": db_order.valor_total
+    }
+
+@router.put("/solicitacoes/{order_id}", response_model=ServiceOrderResponse)
+async def update_order(
+    order_id: int,
+    data: ServiceOrderUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
+    db_order = db.query(ServiceOrder).filter(ServiceOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+
+    # Update basic fields
+    if data.titulo is not None: db_order.title = data.titulo
+    if data.status is not None: db_order.status = data.status
+    if data.priority is not None: db_order.priority = data.priority
+    if data.service_type is not None: db_order.service_type = data.service_type
+    if data.description is not None: db_order.description = data.description
+    if data.descricao_detalhada is not None: db_order.descricao_detalhada = data.descricao_detalhada
+    if data.technical_report is not None: db_order.relatorio_tecnico = data.technical_report
+    if data.valor_total is not None: db_order.valor_total = data.valor_total
+    if data.historico is not None: db_order.historico_json = data.historico
+
+    # Update items if provided
+    if data.itens_os is not None:
+        # Remove existing items
+        db.query(ItemOS).filter(ItemOS.solicitacao_id == order_id).delete()
+        # Add new items
+        for item in data.itens_os:
+            db_item = ItemOS(
+                solicitacao_id=order_id,
+                descricao_tarefa=item.descricao,
+                quantidade=item.quantidade,
+                valor_unitario=item.valor_unitario,
+                valor_total=item.quantidade * item.valor_unitario,
+                status_item=item.status
+            )
+            db.add(db_item)
+
+    # Set completed_at if status changed to concluded
+    if data.status in ["concluido", "faturado"] and not db_order.completed_at:
+        db_order.completed_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(db_order)
+
+    # Invalidate Caches
+    delete_cache("orders:list:all")
+    delete_cache("dashboard:prestador")
+    delete_cache("dashboard:admin")
+    delete_cache("maintenance") # Invalidate all maintenance caches
+
+    # Real-time Broadcast
+    try:
+        from websocket_manager import manager
+        await manager.broadcast({
+            "type": "order_updated",
+            "data": {
+                "id": db_order.id,
+                "sequential_id": db_order.sequential_id,
+                "titulo": db_order.title,
+                "status": db_order.status
+            }
+        })
+    except Exception as e:
+        logger.error(f"Failed to broadcast order update: {e}")
 
     return {
         "id": db_order.id,

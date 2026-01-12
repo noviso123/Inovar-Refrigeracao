@@ -116,6 +116,7 @@ def criar_equipamento(
     db.refresh(db_equip)
 
     delete_cache("equipamentos")
+    delete_cache("maintenance")
     return {
         "id": db_equip.id,
         "nome": db_equip.name,
@@ -154,6 +155,7 @@ def atualizar_equipamento(
 
     db.commit()
     delete_cache("equipamentos")
+    delete_cache("maintenance")
     return {"message": "Equipamento atualizado"}
 
 @router.delete("/equipamentos/{equip_id}")
@@ -169,4 +171,5 @@ def deletar_equipamento(
     db.delete(db_equip)
     db.commit()
     delete_cache("equipamentos")
+    delete_cache("maintenance")
     return {"message": "Equipamento removido"}

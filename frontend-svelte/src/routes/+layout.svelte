@@ -53,7 +53,10 @@
         const data = JSON.parse(event.data);
         if (data.type === "new_order") {
           toast.success(`Nova OS #${data.data.sequential_id}: ${data.data.titulo}`);
-          // Optionally trigger a store update or invalidate queries here
+        } else if (data.type === "order_updated") {
+          toast.info(`OS #${data.data.sequential_id} atualizada: ${data.data.status}`);
+        } else if (data.type === "client_updated") {
+          toast.info(`Cliente ${data.data.name} atualizado`);
         } else if (data.type === "notification") {
            unreadCount.update(n => n + 1);
            toast.info(data.message);

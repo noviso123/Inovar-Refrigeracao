@@ -96,6 +96,8 @@ def update_current_user(
         db.refresh(current_user)
 
         logger.info(f"Usuário {current_user.id} atualizado com sucesso")
+        
+        delete_cache("usuarios")
 
         return {
             "id": current_user.id,
@@ -133,8 +135,13 @@ def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_user)
 ):
+    cache_key = "cache:usuarios:all"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     users = db.query(User).all()
-    return [
+    result = [
         {
             "id": u.id,
             "email": u.email,
@@ -158,6 +165,9 @@ def list_users(
         }
         for u in users
     ]
+    
+    set_cache(cache_key, result, ttl_seconds=300)
+    return result
 
 @router.get("/usuarios/{user_id}")
 def get_user(
@@ -210,6 +220,10 @@ def create_user(
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    delete_cache("usuarios")
+    delete_cache("dashboard:admin")
+    
     return db_user
 
 @router.put("/usuarios/{user_id}", response_model=UserResponse)
@@ -244,6 +258,9 @@ def update_user(
 
     db.commit()
     db.refresh(db_user)
+    
+    delete_cache("usuarios")
+    delete_cache("dashboard:admin")
 
     # Construct response manually to include address
     response_data = {
@@ -281,6 +298,10 @@ def delete_user(
 
     db.delete(user)
     db.commit()
+    
+    delete_cache("usuarios")
+    delete_cache("dashboard:admin")
+    
     return {"message": "Usuário removido"}
 
 

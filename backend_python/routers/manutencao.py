@@ -7,6 +7,7 @@ from auth import get_current_user, get_operational_user
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from sqlalchemy import func
+from redis_utils import get_cache, set_cache, delete_cache
 
 router = APIRouter(prefix="/api/manutencao", tags=["Manutenção"])
 
@@ -20,6 +21,11 @@ def get_maintenance_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_operational_user)
 ):
+    cache_key = "cache:maintenance:dashboard"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     today = datetime.utcnow()
     next_30 = today + timedelta(days=30)
     
@@ -55,17 +61,25 @@ def get_maintenance_dashboard(
 
     total = len(equipments)
 
-    return {
+    result = {
         "vencendo_30_dias": vencendo,
         "vencidas": vencidas,
         "total_equipamentos": total
     }
+    
+    set_cache(cache_key, result, ttl_seconds=300)
+    return result
 
 @router.get("/vencendo")
 def get_upcoming_maintenance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_operational_user)
 ):
+    cache_key = "cache:maintenance:upcoming"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     today = datetime.utcnow()
     next_30 = today + timedelta(days=30)
     interval_days = 180
@@ -96,4 +110,5 @@ def get_upcoming_maintenance(
                 "dias_restantes": (next_date - today).days
             })
 
+    set_cache(cache_key, result, ttl_seconds=300)
     return result
