@@ -16,7 +16,7 @@
 
     let email = "suporte@inovarrefrigeracao.com.br";
     let phone = "(11) 99999-9999";
-    let whatsapp = "5511999999999";
+
 
     onMount(async () => {
         try {
@@ -27,12 +27,7 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data.emailContato) email = data.emailContato;
-                if (data.telefoneContato) {
-                    phone = data.telefoneContato;
-                    // Remove non-digits for WhatsApp link
-                    whatsapp = data.telefoneContato.replace(/\D/g, "");
-                    if (!whatsapp.startsWith("55")) whatsapp = "55" + whatsapp;
-                }
+
             }
         } catch (error) {
             console.error("Erro ao carregar dados de suporte:", error);
@@ -132,33 +127,7 @@
                     </div>
 
                     <div class="space-y-4">
-                        <a
-                            href="https://wa.me/{whatsapp}"
-                            target="_blank"
-                            class="flex items-center gap-6 p-6 rounded-[2rem] bg-green-50 border border-green-100 hover:bg-green-100 hover:shadow-lg transition-all duration-300 group"
-                        >
-                            <div
-                                class="p-4 bg-white rounded-2xl shadow-sm text-green-600 group-hover:scale-110 transition-transform"
-                            >
-                                <MessageCircle class="w-8 h-8" />
-                            </div>
-                            <div class="flex-1">
-                                <p
-                                    class="text-xs font-black text-green-600 uppercase tracking-widest"
-                                >
-                                    WhatsApp
-                                </p>
-                                <p class="text-xl font-black text-surface-900">
-                                    Atendimento Rápido
-                                </p>
-                                <p
-                                    class="text-sm font-bold text-green-700/60 mt-1"
-                                >
-                                    Resposta em poucos minutos
-                                </p>
-                            </div>
-                            <ExternalLink class="w-5 h-5 text-green-300" />
-                        </a>
+
 
                         <a
                             href="mailto:{email}"

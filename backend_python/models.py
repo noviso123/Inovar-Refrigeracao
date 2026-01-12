@@ -13,7 +13,7 @@ class SystemSettings(Base):
     cnpj = Column(String, nullable=True)
     email_contact = Column(String, nullable=True)
     phone_contact = Column(String, nullable=True)
-    phone_whatsapp = Column(String, nullable=True)
+    phone_contact = Column(String, nullable=True)
 
     # Address Data
     cep = Column(String, nullable=True)
@@ -62,7 +62,7 @@ class User(Base):
     cidade = Column(String, nullable=True)
     estado = Column(String, nullable=True)
 
-    automacao = Column(JSON, nullable=True) # { "lembreteManutencao": bool, "intervaloMeses": int, "templateMensagem": str, "whatsappInstanceName": str }
+
 
     # Relationships
     service_orders = relationship("ServiceOrder", back_populates="user")
@@ -243,15 +243,4 @@ class Notification(Base):
 
     user = relationship("User")
 
-class ManutencaoAgendada(Base):
-    __tablename__ = "manutencoes_agendadas"
 
-    id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, ForeignKey("clients.id"))
-    equipment_id = Column(Integer, ForeignKey("equipments.id"))
-    data_prevista = Column(DateTime)
-    status = Column(String, default="pendente") # pendente, notificado, agendado, concluido
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    client = relationship("Client")
-    equipment = relationship("Equipment")

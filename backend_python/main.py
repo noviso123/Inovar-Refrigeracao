@@ -182,7 +182,15 @@ async def rate_limit_middleware(request: Request, call_next):
     if request.url.path in ["/", "/health", "/api/health", "/favicon.ico"]:
         return await call_next(request)
 
-    allowed, remaining = check_rate_limit(client_ip, max_requests=100, window_seconds=60)
+    # Rate Limit Configuration
+    rate_limit_enabled = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
+    if not rate_limit_enabled:
+        return await call_next(request)
+
+    max_requests = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "1000"))
+    window_seconds = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
+
+    allowed, remaining = check_rate_limit(client_ip, max_requests=max_requests, window_seconds=window_seconds)
 
     if not allowed:
         return JSONResponse(

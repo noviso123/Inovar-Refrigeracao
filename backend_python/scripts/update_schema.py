@@ -23,8 +23,7 @@ def update_schema():
         "cpf": "VARCHAR",
         "avatar_url": "VARCHAR",
         "signature_url": "TEXT",
-        "address_json": "JSON",
-        "automacao": "JSON"
+        "address_json": "JSON"
     }
     
     with engine.connect() as conn:

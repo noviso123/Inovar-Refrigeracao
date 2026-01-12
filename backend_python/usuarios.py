@@ -29,7 +29,7 @@ class UserResponse(BaseModel):
     cpf: Optional[str] = None
     avatar_url: Optional[str] = None
     signature_base64: Optional[str] = None
-    automacao: Optional[dict] = None
+    signature_base64: Optional[str] = None
     endereco: Optional[dict] = None # Constructed manually in route
 
 class UserCreateRequest(BaseModel):
@@ -49,7 +49,6 @@ class UserUpdateRequest(BaseModel):
     cpf: Optional[str] = None
     avatar_url: Optional[str] = None
     signature_url: Optional[str] = None
-    automacao: Optional[dict] = None
     endereco: Optional[dict] = None
 
 # Routes
@@ -68,7 +67,6 @@ def list_users(db: Session = Depends(get_db)):
             "cpf": u.cpf,
             "avatar_url": u.avatar_url,
             "signature_base64": u.signature_url, # Map signature_url to signature_base64 for frontend
-            "automacao": u.automacao,
             "endereco": {
                 "cep": u.cep,
                 "logradouro": u.logradouro,
@@ -141,7 +139,6 @@ def update_user(user_id: int, user_data: UserUpdateRequest, db: Session = Depend
     if user_data.cpf is not None: db_user.cpf = user_data.cpf
     if user_data.avatar_url is not None: db_user.avatar_url = user_data.avatar_url
     if user_data.signature_url is not None: db_user.signature_url = user_data.signature_url
-    if user_data.automacao is not None: db_user.automacao = user_data.automacao
 
     if user_data.endereco is not None:
         addr = user_data.endereco
@@ -168,7 +165,6 @@ def update_user(user_id: int, user_data: UserUpdateRequest, db: Session = Depend
         "cpf": db_user.cpf,
         "avatar_url": db_user.avatar_url,
         "signature_base64": db_user.signature_url,
-        "automacao": db_user.automacao,
         "endereco": {
             "cep": db_user.cep,
             "logradouro": db_user.logradouro,
@@ -267,18 +263,4 @@ def change_password(
 
     return {"message": "Senha alterada com sucesso"}
 
-@router.put("/usuarios/{user_id}/automacao")
-def update_user_automation(user_id: int, config: dict, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    user.automacao = config
-    db.commit()
-    return {"message": "Configurações de automação atualizadas"}
-
-@router.post("/usuarios/{user_id}/automacao/test")
-def test_user_automation(user_id: int, db: Session = Depends(get_db)):
-    # Simular o disparo de lembretes para este usuário
-    # Na vida real, o scheduler cuidaria disso, mas aqui forçamos uma execução
-    return {"message": "Teste de automação enfileirado", "status": "success"}

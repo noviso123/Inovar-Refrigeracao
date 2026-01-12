@@ -26,7 +26,7 @@
     Wallet,
     QrCode,
     LifeBuoy,
-    BellRing
+    BellRing,
   } from "lucide-svelte";
 
   let isMobileMenuOpen = false;
@@ -53,23 +53,77 @@
     $user?.cargo === "admin"
       ? [
           { id: "/", label: "Dashboard", icon: Home, section: "geral" },
-          { id: "/clientes", label: "Clientes", icon: UserIcon, section: "geral" },
-          { id: "/financeiro", label: "Financeiro", icon: Wallet, section: "geral" },
-          { id: "/usuarios", label: "Usuários", icon: Users, section: "gestao" },
-          { id: "/qrcodes", label: "QR Codes", icon: QrCode, section: "gestao" },
-          { id: "/configuracoes", label: "Configurações", icon: Settings, section: "gestao" },
-          { id: "/suporte", label: "Suporte", icon: LifeBuoy, section: "conta" },
+          {
+            id: "/clientes",
+            label: "Clientes",
+            icon: UserIcon,
+            section: "geral",
+          },
+          {
+            id: "/financeiro",
+            label: "Financeiro",
+            icon: Wallet,
+            section: "geral",
+          },
+          {
+            id: "/usuarios",
+            label: "Usuários",
+            icon: Users,
+            section: "gestao",
+          },
+          {
+            id: "/qrcodes",
+            label: "QR Codes",
+            icon: QrCode,
+            section: "gestao",
+          },
+          {
+            id: "/configuracoes",
+            label: "Configurações",
+            icon: Settings,
+            section: "gestao",
+          },
+          {
+            id: "/suporte",
+            label: "Suporte",
+            icon: LifeBuoy,
+            section: "conta",
+          },
         ]
       : [
           { id: "/", label: "Painel", icon: Home, section: "geral" },
-          { id: "/solicitacoes", label: "Meus Serviços", icon: Briefcase, section: "geral" },
-          { id: "/clientes", label: "Clientes", icon: UserIcon, section: "geral" },
-          { id: "/agenda", label: "Minha Agenda", icon: Calendar, section: "geral" },
-          { id: "/whatsapp", label: "WhatsApp", icon: MessageCircle, section: "geral" },
-          { id: "/configuracoes", label: "Minha Conta", icon: Settings, section: "conta" },
-          { id: "/suporte", label: "Suporte", icon: LifeBuoy, section: "conta" },
-        ];
+          {
+            id: "/solicitacoes",
+            label: "Meus Serviços",
+            icon: Briefcase,
+            section: "geral",
+          },
+          {
+            id: "/clientes",
+            label: "Clientes",
+            icon: UserIcon,
+            section: "geral",
+          },
+          {
+            id: "/agenda",
+            label: "Minha Agenda",
+            icon: Calendar,
+            section: "geral",
+          },
 
+          {
+            id: "/configuracoes",
+            label: "Minha Conta",
+            icon: Settings,
+            section: "conta",
+          },
+          {
+            id: "/suporte",
+            label: "Suporte",
+            icon: LifeBuoy,
+            section: "conta",
+          },
+        ];
 
   $: sections = {
     geral: menuItems.filter((i) => i.section === "geral"),
@@ -229,7 +283,9 @@
         <div class="flex flex-col items-center">
           <div class="flex items-center gap-2">
             <img src="/logo.png" alt="Logo" class="w-6 h-6 object-contain" />
-            <span class="font-bold text-base text-surface-900 leading-none">Inovar</span>
+            <span class="font-bold text-base text-surface-900 leading-none"
+              >Inovar</span
+            >
           </div>
           <span
             class="text-[8px] font-bold text-brand-600 uppercase tracking-[0.2em] mt-0.5"
@@ -249,7 +305,10 @@
           {/if}
         </button>
 
-        <NotificationsPanel isOpen={showNotifications} onClose={() => showNotifications = false} />
+        <NotificationsPanel
+          isOpen={showNotifications}
+          onClose={() => (showNotifications = false)}
+        />
       </header>
 
       <!-- ===== MAIN CONTENT ===== -->
