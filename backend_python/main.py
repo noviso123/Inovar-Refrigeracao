@@ -422,11 +422,15 @@ async def websocket_notifications(websocket: WebSocket, token: str = None):
         except:
             pass
 
-# Serve Static Files (Frontend) - Only if directory exists
-if os.path.exists("static/assets"):
-    app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
-elif os.path.exists("../static/assets"):
-    app.mount("/assets", StaticFiles(directory="../static/assets"), name="assets")
+# Serve Static Files (Frontend) - Only if directory exists and not on Vercel
+if not os.getenv("VERCEL"):
+    try:
+        if os.path.isdir("static/assets"):
+            app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+        elif os.path.isdir("../static/assets"):
+            app.mount("/assets", StaticFiles(directory="../static/assets"), name="assets")
+    except Exception as e:
+        logger.warning(f"Static assets mount skipped: {e}")
 
 # SPA Fallback - Catch all other routes and serve index.html
 @app.get("/{full_path:path}")
