@@ -4,7 +4,7 @@ httpx==0.24.1
 pydantic>=2.7.0
 pydantic-settings>=2.2.0
 redis==5.0.1
-psycopg2==2.9.9
+psycopg2-binary==2.9.9
 sqlalchemy==2.0.25
 python-multipart==0.0.6
 python-jose[cryptography]==3.3.0

@@ -22,7 +22,15 @@
         },
         {
             "src": "/(.*)",
-            "dest": "frontend-svelte/$1"
+            "dest": "frontend-svelte/$1",
+            "continue": true
+        },
+        {
+            "handle": "filesystem"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "frontend-svelte/index.html"
         }
     ],
     "crons": [
@@ -30,5 +38,6 @@
             "path": "/api/cron/maintenance-reminders",
             "schedule": "0 9 * * *"
         }
-    ]
+    ],
+    "cleanUrls": true
 }
