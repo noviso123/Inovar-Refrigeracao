@@ -435,18 +435,22 @@ if not os.getenv("VERCEL"):
 # SPA Fallback - Catch all other routes and serve index.html
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
-    # API routes are already handled above due to order
-    # If file exists in static, serve it (e.g. favicon, manifest)
+    # If we are on Vercel, this route should only be reached for /api/* routes 
+    # that didn't match any other handler.
+    if os.getenv("VERCEL"):
+        return JSONResponse(
+            status_code=404, 
+            content={"detail": f"API route not found: /api/{full_path}"}
+        )
+    
+    # Local development fallback
     static_file_path = os.path.join("static", full_path)
     if os.path.exists(static_file_path) and os.path.isfile(static_file_path):
         return FileResponse(static_file_path)
     
-    # Otherwise serve index.html if it exists
     if os.path.exists("static/index.html"):
         return FileResponse("static/index.html")
     
-    # On Vercel, this is handled by rewrites, so we can return a 404
-    # if we reach here, it means the rewrite didn't catch it or it's a real 404
     return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@
             "destination": "/api/index.py"
         },
         {
-            "source": "/(.*)",
+            "source": "/((?!api/).*)",
             "destination": "/index.html"
         }
     ],
@@ -31,5 +31,6 @@
             "schedule": "0 9 * * *"
         }
     ],
-    "cleanUrls": true
+    "cleanUrls": true,
+    "trailingSlash": false
 }
