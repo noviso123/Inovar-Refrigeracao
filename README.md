@@ -1,6 +1,6 @@
 # Inovar Refrigeração - Sistema de Gestão
 
-Sistema completo de gestão para empresas de refrigeração, incluindo gerenciamento de clientes, ordens de serviço, equipamentos, técnicos, e integração com WhatsApp.
+Sistema completo de gestão para empresas de refrigeração, incluindo gerenciamento de clientes, ordens de serviço, equipamentos e técnicos.
 
 ## 🚀 Tecnologias
 
