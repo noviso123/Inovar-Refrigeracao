@@ -108,10 +108,19 @@
       {/each}
     {:else if $isAdmin}
       <!-- Admin Stats -->
-      <Card interactive padding="p-6" className="group overflow-hidden relative" on:click={() => goto("/usuarios")}>
-        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-brand-500/5 rounded-full blur-2xl"></div>
+      <Card
+        interactive
+        padding="p-6"
+        className="group overflow-hidden relative"
+        on:click={() => goto("/usuarios")}
+      >
+        <div
+          class="absolute -right-4 -bottom-4 w-24 h-24 bg-brand-500/5 rounded-full blur-2xl"
+        ></div>
         <div class="flex items-start justify-between relative z-10">
-          <div class="p-3 bg-brand-600 text-white rounded-2xl shadow-lg shadow-brand-200 group-hover:scale-110 transition-transform">
+          <div
+            class="p-3 bg-brand-600 text-white rounded-2xl shadow-lg shadow-brand-200 group-hover:scale-110 transition-transform"
+          >
             <Users class="w-6 h-6" />
           </div>
           <Badge variant="brand">Usuários</Badge>
@@ -162,10 +171,19 @@
         </div>
       </Card>
 
-      <Card interactive padding="p-6" className="group overflow-hidden relative" on:click={() => goto("/clientes")}>
-        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
+      <Card
+        interactive
+        padding="p-6"
+        className="group overflow-hidden relative"
+        on:click={() => goto("/clientes")}
+      >
+        <div
+          class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"
+        ></div>
         <div class="flex items-start justify-between relative z-10">
-          <div class="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
+          <div
+            class="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform"
+          >
             <Briefcase class="w-6 h-6" />
           </div>
           <Badge variant="info">Clientes</Badge>
@@ -183,10 +201,19 @@
       </Card>
     {:else}
       <!-- Provider Stats -->
-      <Card interactive padding="p-6" className="group overflow-hidden relative" on:click={() => goto("/solicitacoes")}>
-        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
+      <Card
+        interactive
+        padding="p-6"
+        className="group overflow-hidden relative"
+        on:click={() => goto("/solicitacoes")}
+      >
+        <div
+          class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"
+        ></div>
         <div class="flex items-start justify-between relative z-10">
-          <div class="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
+          <div
+            class="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform"
+          >
             <Briefcase class="w-6 h-6" />
           </div>
           <Badge variant="info">Total</Badge>
@@ -203,10 +230,19 @@
         </div>
       </Card>
 
-      <Card interactive padding="p-6" className="group overflow-hidden relative" on:click={() => goto("/solicitacoes")}>
-        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl"></div>
+      <Card
+        interactive
+        padding="p-6"
+        className="group overflow-hidden relative"
+        on:click={() => goto("/solicitacoes")}
+      >
+        <div
+          class="absolute -right-4 -bottom-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl"
+        ></div>
         <div class="flex items-start justify-between relative z-10">
-          <div class="p-3 bg-orange-600 text-white rounded-2xl shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform">
+          <div
+            class="p-3 bg-orange-600 text-white rounded-2xl shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform"
+          >
             <Clock class="w-6 h-6" />
           </div>
           <Badge variant="warning">Abertas</Badge>
@@ -379,7 +415,7 @@
           <h4 class="font-black text-lg mb-2">Dica de Eficiência</h4>
           <p class="text-brand-100 text-sm leading-relaxed mb-6">
             Mantenha o status das suas OS atualizados para que o cliente receba
-            notificações automáticas via WhatsApp.
+            notificações automáticas sobre o andamento do serviço.
           </p>
           <Button
             variant="secondary"

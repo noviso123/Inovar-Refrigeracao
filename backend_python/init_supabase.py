@@ -13,7 +13,7 @@ print(f"Conectando ao Supabase PostgreSQL...")
 from database import get_db, engine
 from models import (
     Base, SystemSettings, User, Client, Location, Equipment, 
-    ServiceOrder, ItemOS, WhatsAppInstance, Message, Notification,
+    ServiceOrder, ItemOS, Notification,
     BotConfig, FilaEnvio, BotStatus
 )
 from auth import get_password_hash
