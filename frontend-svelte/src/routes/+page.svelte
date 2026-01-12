@@ -171,32 +171,20 @@
         </div>
       </Card>
 
-      <Card
-        interactive
-        padding="p-6"
-        className="group overflow-hidden relative"
-        on:click={() => goto("/clientes")}
-      >
-        <div
-          class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"
-        ></div>
-        <div class="flex items-start justify-between relative z-10">
-          <div
-            class="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform"
-          >
-            <Briefcase class="w-6 h-6" />
+      <Card padding="p-6">
+        <div class="flex items-start justify-between">
+          <div class="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+            <ShieldCheck class="w-6 h-6" />
           </div>
-          <Badge variant="info">Clientes</Badge>
+          <Badge variant="info">Segurança</Badge>
         </div>
-        <div class="mt-4 relative z-10">
+        <div class="mt-4">
           <p
             class="text-sm font-bold text-surface-500 uppercase tracking-wider"
           >
-            Base Total
+            Firewall
           </p>
-          <h3 class="text-3xl font-black text-surface-900 mt-1">
-            {stats.total_clients || 0}
-          </h3>
+          <h3 class="text-3xl font-black text-surface-900 mt-1">Ativo</h3>
         </div>
       </Card>
     {:else}
@@ -301,81 +289,103 @@
 
   <!-- Main Content Grid -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Recent Activity -->
+    <!-- Recent Activity (Hidden for Admin) -->
     <div class="lg:col-span-2 space-y-6">
-      <div class="flex items-center justify-between">
-        <h2 class="text-xl font-black text-surface-900 flex items-center gap-3">
-          <Activity class="w-6 h-6 text-brand-600" />
-          Atividade Recente
-        </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          on:click={() => goto("/solicitacoes")}
-        >
-          Ver tudo <ChevronRight class="w-4 h-4 ml-1" />
-        </Button>
-      </div>
-
-      {#if isLoading}
-        <div class="space-y-4">
-          {#each Array(3) as _}
-            <Card padding="p-4">
-              <div class="flex gap-4">
-                <Skeleton width="48px" height="48px" className="rounded-xl" />
-                <div class="flex-1">
-                  <Skeleton width="40%" height="1.2rem" className="mb-2" />
-                  <Skeleton width="20%" height="0.8rem" />
-                </div>
-              </div>
-            </Card>
-          {/each}
+      {#if !$isAdmin}
+        <div class="flex items-center justify-between">
+          <h2
+            class="text-xl font-black text-surface-900 flex items-center gap-3"
+          >
+            <Activity class="w-6 h-6 text-brand-600" />
+            Atividade Recente
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            on:click={() => goto("/solicitacoes")}
+          >
+            Ver tudo <ChevronRight class="w-4 h-4 ml-1" />
+          </Button>
         </div>
-      {:else if !recentOrders.length}
-        <Card padding="p-12" className="text-center">
-          <div class="p-4 bg-surface-50 rounded-full w-fit mx-auto mb-4">
-            <AlertCircle class="w-8 h-8 text-surface-300" />
-          </div>
-          <p class="text-surface-400 font-medium">
-            Nenhuma atividade registrada recentemente.
-          </p>
-        </Card>
-      {:else}
-        <div class="space-y-3">
-          {#each recentOrders as os}
-            <Card
-              interactive
-              padding="p-4"
-              on:click={() => goto(`/solicitacao/${os.id}`)}
-            >
-              <div class="flex items-center gap-4">
-                <div
-                  class="w-12 h-12 rounded-xl bg-surface-100 flex items-center justify-center group-hover:bg-white transition-all shadow-sm"
-                >
-                  <Briefcase class="w-6 h-6 text-surface-500" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="font-bold text-surface-900 truncate">{os.titulo}</p>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <Badge variant="neutral" size="sm"
-                      >#{os.sequential_id}</Badge
-                    >
-                    <span class="text-xs text-surface-400 font-medium truncate"
-                      >{os.client_name || "Cliente não informado"}</span
-                    >
+
+        {#if isLoading}
+          <div class="space-y-4">
+            {#each Array(3) as _}
+              <Card padding="p-4">
+                <div class="flex gap-4">
+                  <Skeleton width="48px" height="48px" className="rounded-xl" />
+                  <div class="flex-1">
+                    <Skeleton width="40%" height="1.2rem" className="mb-2" />
+                    <Skeleton width="20%" height="0.8rem" />
                   </div>
                 </div>
-                <Badge
-                  variant={os.status === "concluido" || os.status === "faturado"
-                    ? "success"
-                    : "warning"}
-                >
-                  {os.status}
-                </Badge>
-              </div>
-            </Card>
-          {/each}
-        </div>
+              </Card>
+            {/each}
+          </div>
+        {:else if !recentOrders.length}
+          <Card padding="p-12" className="text-center">
+            <div class="p-4 bg-surface-50 rounded-full w-fit mx-auto mb-4">
+              <AlertCircle class="w-8 h-8 text-surface-300" />
+            </div>
+            <p class="text-surface-400 font-medium">
+              Nenhuma atividade registrada recentemente.
+            </p>
+          </Card>
+        {:else}
+          <div class="space-y-3">
+            {#each recentOrders as os}
+              <Card
+                interactive
+                padding="p-4"
+                on:click={() => goto(`/solicitacao/${os.id}`)}
+              >
+                <div class="flex items-center gap-4">
+                  <div
+                    class="w-12 h-12 rounded-xl bg-surface-100 flex items-center justify-center group-hover:bg-white transition-all shadow-sm"
+                  >
+                    <Briefcase class="w-6 h-6 text-surface-500" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-bold text-surface-900 truncate">
+                      {os.titulo}
+                    </p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <Badge variant="neutral" size="sm"
+                        >#{os.sequential_id}</Badge
+                      >
+                      <span
+                        class="text-xs text-surface-400 font-medium truncate"
+                        >{os.client_name || "Cliente não informado"}</span
+                      >
+                    </div>
+                  </div>
+                  <Badge
+                    variant={os.status === "concluido" ||
+                    os.status === "faturado"
+                      ? "success"
+                      : "warning"}
+                  >
+                    {os.status}
+                  </Badge>
+                </div>
+              </Card>
+            {/each}
+          </div>
+        {/if}
+      {:else}
+        <!-- Admin Placeholder or Logs -->
+        <Card padding="p-8">
+          <div
+            class="flex flex-col items-center justify-center text-center py-8"
+          >
+            <ShieldCheck class="w-12 h-12 text-brand-200 mb-4" />
+            <h3 class="text-lg font-bold text-surface-900">Sistema Seguro</h3>
+            <p class="text-surface-500 max-w-md mt-2">
+              Todas as operações estão sendo monitoradas. Nenhuma anomalia
+              detectada nos últimos 24h.
+            </p>
+          </div>
+        </Card>
       {/if}
     </div>
 
@@ -427,28 +437,30 @@
         </Card>
       {/if}
 
-      <Card padding="p-8">
-        <h4 class="font-black text-surface-900 mb-6 flex items-center gap-2">
-          <Calendar class="w-5 h-5 text-brand-600" />
-          Agenda
-        </h4>
-        <div
-          class="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-surface-100 rounded-2xl"
-        >
-          <Calendar class="w-8 h-8 text-surface-200 mb-2" />
-          <p class="text-xs text-surface-400 font-medium">
-            Agenda vazia para hoje
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          fullWidth
-          className="mt-6"
-          on:click={() => goto("/agenda")}
-        >
-          Abrir Agenda
-        </Button>
-      </Card>
+      {#if !$isAdmin}
+        <Card padding="p-8">
+          <h4 class="font-black text-surface-900 mb-6 flex items-center gap-2">
+            <Calendar class="w-5 h-5 text-brand-600" />
+            Agenda
+          </h4>
+          <div
+            class="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-surface-100 rounded-2xl"
+          >
+            <Calendar class="w-8 h-8 text-surface-200 mb-2" />
+            <p class="text-xs text-surface-400 font-medium">
+              Agenda vazia para hoje
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            fullWidth
+            className="mt-6"
+            on:click={() => goto("/agenda")}
+          >
+            Abrir Agenda
+          </Button>
+        </Card>
+      {/if}
     </div>
   </div>
 </div>

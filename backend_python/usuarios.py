@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-from auth import get_current_user, get_password_hash
+from auth import get_current_user, get_password_hash, get_admin_user
 
 
 class UserResponse(BaseModel):
@@ -129,7 +129,10 @@ def change_password(
 
 # Routes
 @router.get("/usuarios")
-def list_users(db: Session = Depends(get_db)):
+def list_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user)
+):
     users = db.query(User).all()
     return [
         {
@@ -157,7 +160,11 @@ def list_users(db: Session = Depends(get_db)):
     ]
 
 @router.get("/usuarios/{user_id}")
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(
+    user_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user)
+):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -184,7 +191,11 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     }
 
 @router.post("/usuarios", response_model=UserResponse)
-def create_user(user: UserCreateRequest, db: Session = Depends(get_db)):
+def create_user(
+    user: UserCreateRequest, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user)
+):
     existing = db.query(User).filter(User.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
@@ -202,7 +213,12 @@ def create_user(user: UserCreateRequest, db: Session = Depends(get_db)):
     return db_user
 
 @router.put("/usuarios/{user_id}", response_model=UserResponse)
-def update_user(user_id: int, user_data: UserUpdateRequest, db: Session = Depends(get_db)):
+def update_user(
+    user_id: int, 
+    user_data: UserUpdateRequest, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user)
+):
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -254,7 +270,11 @@ def update_user(user_id: int, user_data: UserUpdateRequest, db: Session = Depend
     return response_data
 
 @router.delete("/usuarios/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(
+    user_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user)
+):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")

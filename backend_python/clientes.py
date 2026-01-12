@@ -10,7 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from auth import get_current_user
+from auth import get_current_user, get_operational_user
 from validators import validate_cpf, validate_cnpj
 
 router = APIRouter()
@@ -99,12 +99,19 @@ class ClientResponse(ClientBase):
 
 # Routes - Clients
 @router.get("/clientes", response_model=List[ClientResponse])
-def list_clients(db: Session = Depends(get_db)):
+def list_clients(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     clients = db.query(Client).options(joinedload(Client.locations)).all()
     return clients
 
 @router.post("/clientes", response_model=ClientResponse)
-def create_client(client: ClientCreate, db: Session = Depends(get_db)):
+def create_client(
+    client: ClientCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     logger.info(f"Creating client: {client.nome}")
     document = None
     if client.cpf:
@@ -160,14 +167,23 @@ def create_client(client: ClientCreate, db: Session = Depends(get_db)):
     return db_client
 
 @router.get("/clientes/{client_id}", response_model=ClientResponse)
-def get_client(client_id: int, db: Session = Depends(get_db)):
+def get_client(
+    client_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     c = db.query(Client).filter(Client.id == client_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return c
 
 @router.put("/clientes/{client_id}", response_model=ClientResponse)
-def update_client(client_id: int, client: ClientUpdate, db: Session = Depends(get_db)):
+def update_client(
+    client_id: int, 
+    client: ClientUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     db_client = db.query(Client).filter(Client.id == client_id).first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
@@ -224,7 +240,11 @@ def update_client(client_id: int, client: ClientUpdate, db: Session = Depends(ge
     return db_client
 
 @router.delete("/clientes/{client_id}")
-def delete_client(client_id: int, db: Session = Depends(get_db)):
+def delete_client(
+    client_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     db_client = db.query(Client).filter(Client.id == client_id).first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
@@ -236,7 +256,12 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
 
 # Routes - Locations
 @router.post("/clientes/{client_id}/locais", response_model=LocationResponse)
-def add_location(client_id: int, location: LocationBase, db: Session = Depends(get_db)):
+def add_location(
+    client_id: int, 
+    location: LocationBase, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     db_client = db.query(Client).filter(Client.id == client_id).first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
 from models import Client, Equipment, ServiceOrder
-from auth import get_current_user
+from auth import get_current_user, get_operational_user
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -16,7 +16,10 @@ class MaintenanceStats(BaseModel):
     total_equipamentos: int
 
 @router.get("/dashboard", response_model=MaintenanceStats)
-def get_maintenance_dashboard(db: Session = Depends(get_db)):
+def get_maintenance_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     today = datetime.utcnow()
     next_30 = today + timedelta(days=30)
     
@@ -59,7 +62,10 @@ def get_maintenance_dashboard(db: Session = Depends(get_db)):
     }
 
 @router.get("/vencendo")
-def get_upcoming_maintenance(db: Session = Depends(get_db)):
+def get_upcoming_maintenance(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     today = datetime.utcnow()
     next_30 = today + timedelta(days=30)
     interval_days = 180

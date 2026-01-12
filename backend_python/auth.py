@@ -124,6 +124,33 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     return user
 
 
+async def get_admin_user(current_user: User = Depends(get_current_user)):
+    """
+    Dependency to ensure the user has 'admin' role.
+    """
+    if current_user.role != "admin":
+        logger.warning(f"Acesso negado para usuário não-admin: {current_user.email}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a administradores"
+        )
+    return current_user
+
+
+async def get_operational_user(current_user: User = Depends(get_current_user)):
+    """
+    Dependency to ensure the user has 'prestador' role (Operational/Owner).
+    Admins are blocked from operational data.
+    """
+    if current_user.role == "admin":
+        logger.warning(f"Acesso negado para admin em rota operacional: {current_user.email}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administradores não têm acesso a dados operacionais"
+        )
+    return current_user
+
+
 # Rotas
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):

@@ -18,6 +18,7 @@
         MoreVertical,
         Check,
         AlertCircle,
+        QrCode,
     } from "lucide-svelte";
     import { Card, Badge, Button, Input, Modal, Skeleton } from "$lib";
 
@@ -44,7 +45,9 @@
     let clientes: Cliente[] = [];
     let loading = true;
     let isModalOpen = false;
+    let isQrModalOpen = false;
     let editingEquipment: Equipment | null = null;
+    let selectedQrEquipment: Equipment | null = null;
     let saving = false;
     let searchQuery = "";
 
@@ -169,6 +172,11 @@
     function openNew() {
         resetForm();
         isModalOpen = true;
+    }
+
+    function openQr(eq: Equipment) {
+        selectedQrEquipment = eq;
+        isQrModalOpen = true;
     }
 
     $: filteredEquipments = equipments.filter(
@@ -386,15 +394,24 @@
                             {/if}
                         </div>
 
-                        <div class="mt-8 pt-6 border-t border-surface-100">
+                        <div
+                            class="mt-8 pt-6 border-t border-surface-100 flex gap-2"
+                        >
                             <Button
                                 variant="secondary"
-                                fullWidth
+                                className="flex-1"
                                 on:click={() => openEdit(eq)}
                             >
                                 Ver Detalhes <ChevronRight
                                     class="w-4 h-4 ml-2"
                                 />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                className="px-3 text-brand-600 hover:bg-brand-50"
+                                on:click={() => openQr(eq)}
+                            >
+                                <QrCode class="w-5 h-5" />
                             </Button>
                         </div>
                     </Card>
@@ -536,4 +553,40 @@
             </Button>
         </div>
     </div>
+</Modal>
+
+<!-- QR Code Modal -->
+<Modal
+    isOpen={isQrModalOpen}
+    title="QR Code do Equipamento"
+    onClose={() => (isQrModalOpen = false)}
+>
+    {#if selectedQrEquipment}
+        <div class="flex flex-col items-center justify-center py-8 space-y-6">
+            <div
+                class="bg-white p-4 rounded-2xl shadow-lg border border-surface-100"
+            >
+                <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(JSON.stringify({ id: selectedQrEquipment.id, nome: selectedQrEquipment.nome }))}`}
+                    alt="QR Code"
+                    class="w-48 h-48"
+                />
+            </div>
+            <div class="text-center">
+                <h3 class="font-bold text-lg text-surface-900">
+                    {selectedQrEquipment.nome}
+                </h3>
+                <p class="text-sm text-surface-500">
+                    {selectedQrEquipment.marca}
+                    {selectedQrEquipment.modelo}
+                </p>
+                <p class="text-xs text-surface-400 mt-2 font-mono">
+                    {selectedQrEquipment.numero_serie || "Sem S/N"}
+                </p>
+            </div>
+            <Button variant="primary" on:click={() => window.print()}>
+                Imprimir Etiqueta
+            </Button>
+        </div>
+    {/if}
 </Modal>

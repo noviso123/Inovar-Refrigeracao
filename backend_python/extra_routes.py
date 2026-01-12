@@ -36,7 +36,10 @@ class BrandingUpdate(BaseModel):
     ambienteFiscal: Optional[str] = None
 
 @router.get("/empresas/me")
-async def get_system_settings(db: Session = Depends(get_db)):
+async def get_system_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Retorna as configurações do sistema (branding e fiscal)"""
     settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
     if not settings:
@@ -72,7 +75,11 @@ async def get_system_settings(db: Session = Depends(get_db)):
     }
 
 @router.put("/empresas/me")
-async def update_system_settings(data: BrandingUpdate, db: Session = Depends(get_db)):
+async def update_system_settings(
+    data: BrandingUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Atualiza as configurações do sistema"""
     settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
     if not settings:

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-from auth import get_current_user
+from auth import get_current_user, get_operational_user
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -49,7 +49,8 @@ class EquipmentResponse(EquipmentBase):
 def listar_equipamentos(
     locationId: Optional[int] = None,
     clientId: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
 ):
     cache_key = f"cache:equipamentos:list:{locationId or 'all'}:{clientId or 'all'}"
     cached = get_cache(cache_key)
@@ -84,7 +85,11 @@ def listar_equipamentos(
     return result
 
 @router.post("/equipamentos", response_model=EquipmentResponse)
-def criar_equipamento(equip: EquipmentCreate, db: Session = Depends(get_db)):
+def criar_equipamento(
+    equip: EquipmentCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     # Validate Location
     location = db.query(Location).filter(Location.id == equip.locationId).first()
     if not location:
@@ -125,7 +130,12 @@ def criar_equipamento(equip: EquipmentCreate, db: Session = Depends(get_db)):
     }
 
 @router.put("/equipamentos/{equip_id}")
-def atualizar_equipamento(equip_id: int, equip: EquipmentUpdate, db: Session = Depends(get_db)):
+def atualizar_equipamento(
+    equip_id: int, 
+    equip: EquipmentUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     db_equip = db.query(Equipment).filter(Equipment.id == equip_id).first()
     if not db_equip:
         raise HTTPException(status_code=404, detail="Equipamento não encontrado")
@@ -147,7 +157,11 @@ def atualizar_equipamento(equip_id: int, equip: EquipmentUpdate, db: Session = D
     return {"message": "Equipamento atualizado"}
 
 @router.delete("/equipamentos/{equip_id}")
-def deletar_equipamento(equip_id: int, db: Session = Depends(get_db)):
+def deletar_equipamento(
+    equip_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     db_equip = db.query(Equipment).filter(Equipment.id == equip_id).first()
     if not db_equip:
         raise HTTPException(status_code=404, detail="Equipamento não encontrado")

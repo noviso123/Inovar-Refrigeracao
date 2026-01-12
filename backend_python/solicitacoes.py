@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-from auth import get_current_user
+from auth import get_current_user, get_operational_user
 from pix_utils import generate_pix_payload
 from pdf_utils import generate_os_pdf
 from fastapi.responses import Response
@@ -58,14 +58,24 @@ class ServiceOrderResponse(ServiceOrderBase):
 
 # Routes
 @router.get("/solicitacoes", response_model=List[ServiceOrderResponse])
-def list_orders(db: Session = Depends(get_db)):
+async def list_orders(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
+    # Try cache first
+    cache_key = "orders:list:all"
+    cached_data = get_cache(cache_key)
+    if cached_data:
+        return cached_data
+
     orders = db.query(ServiceOrder).options(
         joinedload(ServiceOrder.client),
         joinedload(ServiceOrder.location),
         joinedload(ServiceOrder.user)
-    ).all()
-    # Manual mapping for response to match keys in ServiceOrderResponse
-    return [
+    ).order_by(ServiceOrder.created_at.desc()).all()
+    
+    # Manual mapping
+    result = [
         {
             "id": o.id,
             "sequential_id": o.sequential_id,
@@ -78,7 +88,7 @@ def list_orders(db: Session = Depends(get_db)):
             "local_id": o.location_id,
             "equipment_id": o.equipment_id,
             "scheduled_at": o.scheduled_at.isoformat() if o.scheduled_at else None,
-            "created_at": o.created_at,
+            "created_at": o.created_at.isoformat() if o.created_at else None,
             "valor_total": o.valor_total,
             "client_name": o.client.name if o.client else None,
             "location_name": o.location.nickname if o.location else None,
@@ -86,14 +96,18 @@ def list_orders(db: Session = Depends(get_db)):
         }
         for o in orders
     ]
+    
+    # Cache for 60 seconds
+    set_cache(cache_key, result, ttl_seconds=60)
+    return result
 
 @router.get("/meus-servicos", response_model=List[ServiceOrderResponse])
-def list_my_orders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_my_orders(current_user: User = Depends(get_operational_user), db: Session = Depends(get_db)):
     orders = db.query(ServiceOrder).filter(ServiceOrder.user_id == current_user.id).options(
         joinedload(ServiceOrder.client),
         joinedload(ServiceOrder.location),
         joinedload(ServiceOrder.user)
-    ).all()
+    ).order_by(ServiceOrder.created_at.desc()).all()
     return [
         {
             "id": o.id,
@@ -117,7 +131,11 @@ def list_my_orders(current_user: User = Depends(get_current_user), db: Session =
     ]
 
 @router.post("/solicitacoes", response_model=ServiceOrderResponse)
-def create_order(order: ServiceOrderCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def create_order(
+    order: ServiceOrderCreate, 
+    current_user: User = Depends(get_operational_user), 
+    db: Session = Depends(get_db)
+):
     # Sequential ID
     max_id = db.query(func.max(ServiceOrder.sequential_id)).scalar()
     sequential_id = (max_id or 100) + 1 # Start from 101 or similar
@@ -161,6 +179,26 @@ def create_order(order: ServiceOrderCreate, current_user: User = Depends(get_cur
     db_order.valor_total = total_value
     db.commit()
     db.refresh(db_order)
+    
+    # Invalidate Cache
+    delete_cache("orders:list:all")
+    delete_cache(f"dashboard:prestador:v5") # Invalidate dashboard cache too
+    
+    # Real-time Broadcast
+    try:
+        from websocket_manager import manager
+        await manager.broadcast({
+            "type": "new_order",
+            "data": {
+                "id": db_order.id,
+                "sequential_id": db_order.sequential_id,
+                "titulo": db_order.title,
+                "status": db_order.status,
+                "client_name": db_order.client.name if db_order.client else "Cliente"
+            }
+        })
+    except Exception as e:
+        logger.error(f"Failed to broadcast new order: {e}")
 
     return {
         "id": db_order.id,
@@ -179,7 +217,11 @@ def create_order(order: ServiceOrderCreate, current_user: User = Depends(get_cur
     }
 
 @router.get("/solicitacoes/{order_id}")
-def get_order(order_id: int, db: Session = Depends(get_db)):
+def get_order(
+    order_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     from models import SystemSettings
     order = db.query(ServiceOrder).filter(ServiceOrder.id == order_id).first()
     if not order:
@@ -278,9 +320,13 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
     }
 
 @router.get("/solicitacoes/{order_id}/pdf")
-def get_order_pdf(order_id: int, db: Session = Depends(get_db)):
+def get_order_pdf(
+    order_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     from models import SystemSettings
-    order_data = get_order(order_id, db)
+    order_data = get_order(order_id, db, current_user) # Pass current_user
     settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
 
     settings_dict = {
@@ -305,7 +351,11 @@ def get_order_pdf(order_id: int, db: Session = Depends(get_db)):
     )
 
 @router.get("/solicitacoes/{order_id}/pix")
-def get_order_pix(order_id: int, db: Session = Depends(get_db)):
+def get_order_pix(
+    order_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operational_user)
+):
     from models import SystemSettings
     order = db.query(ServiceOrder).filter(ServiceOrder.id == order_id).first()
     if not order:

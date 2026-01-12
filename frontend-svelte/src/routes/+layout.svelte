@@ -1,12 +1,13 @@
 <script lang="ts">
   import "../app.css";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { initAuth, user, isAuthenticated, logout } from "$lib/auth";
   import { unreadCount } from "$lib/notifications";
   import NotificationsPanel from "$lib/components/NotificationsPanel.svelte";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { userModal } from "$lib/modalStore";
+  import { toast } from "svelte-sonner"; // Assuming svelte-sonner is installed or similar
   import {
     Home,
     Menu,
@@ -31,9 +32,53 @@
 
   let isMobileMenuOpen = false;
   let showNotifications = false;
+  let socket: WebSocket | null = null;
+  let reconnectInterval: any;
+
+  function connectWebSocket() {
+    if (typeof window === "undefined" || !$isAuthenticated) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws/notifications?token=${localStorage.getItem("token")}`;
+
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+      clearInterval(reconnectInterval);
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "new_order") {
+          toast.success(`Nova OS #${data.data.sequential_id}: ${data.data.titulo}`);
+          // Optionally trigger a store update or invalidate queries here
+        } else if (data.type === "notification") {
+           unreadCount.update(n => n + 1);
+           toast.info(data.message);
+        }
+      } catch (e) {
+        console.error("WS Error:", e);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket disconnected. Reconnecting...");
+      reconnectInterval = setInterval(connectWebSocket, 5000);
+    };
+  }
 
   onMount(() => {
     initAuth();
+    if ($isAuthenticated) {
+        connectWebSocket();
+    }
+  });
+
+  onDestroy(() => {
+    if (socket) socket.close();
+    clearInterval(reconnectInterval);
   });
 
   // Redirecionar para login se não autenticado
@@ -52,7 +97,33 @@
   $: menuItems =
     $user?.cargo === "admin"
       ? [
-          { id: "/", label: "Dashboard", icon: Home, section: "geral" },
+          {
+            id: "/usuarios",
+            label: "Usuários",
+            icon: Users,
+            section: "gestao",
+          },
+          {
+            id: "/configuracoes",
+            label: "Configurações",
+            icon: Settings,
+            section: "gestao",
+          },
+        ]
+      : [
+          { id: "/", label: "Painel", icon: Home, section: "geral" },
+          {
+            id: "/solicitacoes",
+            label: "Serviços",
+            icon: Briefcase,
+            section: "geral",
+          },
+          {
+            id: "/agenda",
+            label: "Agenda",
+            icon: Calendar,
+            section: "geral",
+          },
           {
             id: "/clientes",
             label: "Clientes",
@@ -66,54 +137,14 @@
             section: "geral",
           },
           {
-            id: "/usuarios",
-            label: "Usuários",
-            icon: Users,
-            section: "gestao",
-          },
-          {
-            id: "/qrcodes",
-            label: "QR Codes",
+            id: "/equipamentos",
+            label: "Equipamentos / QR",
             icon: QrCode,
-            section: "gestao",
+            section: "geral",
           },
           {
             id: "/configuracoes",
             label: "Configurações",
-            icon: Settings,
-            section: "gestao",
-          },
-          {
-            id: "/suporte",
-            label: "Suporte",
-            icon: LifeBuoy,
-            section: "conta",
-          },
-        ]
-      : [
-          { id: "/", label: "Painel", icon: Home, section: "geral" },
-          {
-            id: "/solicitacoes",
-            label: "Meus Serviços",
-            icon: Briefcase,
-            section: "geral",
-          },
-          {
-            id: "/clientes",
-            label: "Clientes",
-            icon: UserIcon,
-            section: "geral",
-          },
-          {
-            id: "/agenda",
-            label: "Minha Agenda",
-            icon: Calendar,
-            section: "geral",
-          },
-
-          {
-            id: "/configuracoes",
-            label: "Minha Conta",
             icon: Settings,
             section: "conta",
           },

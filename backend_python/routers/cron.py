@@ -1,4 +1,5 @@
 import logging
+import os
 from fastapi import APIRouter, Header, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -21,9 +22,13 @@ async def trigger_maintenance_reminders(
     Cron job endpoint to check maintenance reminders.
     This should be called by Vercel Cron once a day.
     """
-    # Basic security check: Vercel sends a specific header for cron jobs
-    # For now, we'll just log the attempt. In production, you can verify the Authorization header
-    # if you set up CRON_SECRET in Vercel.
+    # Security check: Vercel sends a specific header for cron jobs
+    cron_secret = os.getenv("CRON_SECRET")
+    if cron_secret:
+        if not authorization or authorization != f"Bearer {cron_secret}":
+            logger.warning(f"⚠️ Unauthorized Cron Job Attempt: {authorization}")
+            raise HTTPException(status_code=401, detail="Unauthorized")
+    
     logger.info(f"⏳ Cron Job Triggered: Maintenance Reminders (Auth: {authorization})")
 
     try:
