@@ -21,16 +21,7 @@
             "dest": "/api/index.py"
         },
         {
-            "src": "/_app/(.*)",
-            "dest": "/_app/$1"
-        },
-        {
-            "src": "/logo.png",
-            "dest": "/logo.png"
-        },
-        {
-            "src": "/favicon.svg",
-            "dest": "/favicon.svg"
+            "handle": "filesystem"
         },
         {
             "src": "/(.*)",
