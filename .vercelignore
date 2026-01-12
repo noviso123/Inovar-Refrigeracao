@@ -1,11 +1,14 @@
 # Vercel Ignore File
-# Ignore backend and root configuration files to prevent Vercel from building them
-requirements.txt
-backend_python/
+# Allow backend files to be built by Vercel
+!backend_python/
+!backend_python/*.py
+!backend_python/requirements.txt
+!requirements.txt
+
+# Keep ignoring other unnecessary files
 Dockerfile*
 render.yaml
 railway.json
-*.py
 .venv/
 scripts/
 database/
